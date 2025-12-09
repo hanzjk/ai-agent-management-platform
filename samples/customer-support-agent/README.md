@@ -79,13 +79,12 @@ Click on the **"Try It"** section on the left navigation.
 Try these sample questions in the chat interface:
 
 **Flight Inquiries:**
-```
+```text
 What flights do I have booked?
 ```
 
 **Hotel Search:**
-
-```
+```text
 Find me a hotel in Geneva for next week
 ```
 
