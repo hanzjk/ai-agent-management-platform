@@ -529,7 +529,7 @@ verify_docker_running() {
     return 0
 }
 
-# Check if Kind is installed
+# Check if k3d is installed
 verify_k3d_installed() {
     if ! command_exists k3d; then
         log_error "k3d is not installed"
@@ -568,7 +568,8 @@ setup_k3d_cluster() {
     fi
 
     # Check if cluster already exists
-    if k3d cluster ls 2>/dev/null | grep -q "^${cluster_name}$"; then
+    # Extract first column (cluster names) from k3d output and check for exact match
+    if k3d cluster ls 2>/dev/null | awk 'NR>1 {print $1}' | grep -q "^${cluster_name}$"; then
         log_warning "k3d cluster '$cluster_name' already exists"
         
         # Check if cluster container is actually running
@@ -700,22 +701,18 @@ setup_k3d_cluster() {
         fi
     fi
     
-    # Create shared directory for OpenChoreo
-    log_info "Creating shared directory for OpenChoreo..."
-    mkdir -p /tmp/kind-shared
-    
     # Check if config file exists
     if [[ ! -f "$config_file" ]]; then
-        log_error "Kind configuration file not found: $config_file"
+        log_error "k3d configuration file not found: $config_file"
         return 1
     fi
     
-    # Create Kind cluster
+    # Create k3d cluster
     log_info "Creating k3d cluster (this may take 2-3 minutes)..."
-    if k3d cluster create --config "$config_file" 2>&1 | tee /tmp/kind-create.log; then
-        log_success "Kind cluster created successfully"
+    if k3d cluster create --config "$config_file" 2>&1 | tee /tmp/k3d-create.log; then
+        log_success "k3d cluster created successfully"
     else
-        log_error "Failed to create Kind cluster"
+        log_error "Failed to create k3d cluster"
         echo ""
         echo "   Common causes:"
         echo "   • Port 6443 already in use"
@@ -723,7 +720,7 @@ setup_k3d_cluster() {
         echo "   • Previous cluster not fully deleted"
         echo ""
         echo "   Try:"
-        echo "   1. Delete any existing cluster: kind delete cluster --name $cluster_name"
+        echo "   1. Delete any existing cluster: k3d cluster delete $cluster_name"
         echo "   2. Restart Docker"
         echo "   3. Run this script again"
         echo ""
@@ -750,17 +747,17 @@ setup_k3d_cluster() {
 
         if [[ -n "$control_plane_ip" ]]; then
             mkdir -p /state/kube
-            if kind get kubeconfig --name "${cluster_name}" 2>/dev/null | sed "s|server: https://127.0.0.1:[0-9]*|server: https://${control_plane_ip}:6443|" > /state/kube/config-internal.yaml; then
+            if k3d kubeconfig get "${cluster_name}" 2>/dev/null | sed "s|server: https://[^:]*:[0-9]*|server: https://${control_plane_ip}:6443|" > /state/kube/config-internal.yaml; then
                 export KUBECONFIG=/state/kube/config-internal.yaml
-                kubectl config use-context "kind-${cluster_name}" >/dev/null 2>&1 || true
+                kubectl config use-context "k3d-${cluster_name}" >/dev/null 2>&1 || true
                 log_success "kubectl configured with internal IP: ${control_plane_ip}"
             fi
         fi
     else
-        # Local environment: use Kind's built-in kubeconfig export
-        if kind export kubeconfig --name "${cluster_name}" 2>&1 | grep -v "warning"; then
-            kubectl config use-context "kind-${cluster_name}" >/dev/null 2>&1 || true
-            local api_port=$(kubectl config view -o jsonpath="{.clusters[?(@.name=='kind-${cluster_name}')].cluster.server}" 2>/dev/null | grep -oE '[0-9]+$' || echo "6443")
+        # Local environment: use k3d's built-in kubeconfig export
+        if k3d kubeconfig merge "${cluster_name}" --kubeconfig-merge-default 2>&1 | grep -v "warning"; then
+            kubectl config use-context "k3d-${cluster_name}" >/dev/null 2>&1 || true
+            local api_port=$(kubectl config view -o jsonpath="{.clusters[?(@.name=='k3d-${cluster_name}')].cluster.server}" 2>/dev/null | grep -oE '[0-9]+$' || echo "6443")
             log_success "kubectl configured at localhost:${api_port}"
         else
             log_warning "Failed to export kubeconfig automatically"
@@ -789,7 +786,7 @@ setup_k3d_cluster() {
                 echo ""
             fi
 
-            log_success "Kind cluster is ready for OpenChoreo installation"
+            log_success "k3d cluster is ready for OpenChoreo installation"
             return 0
         fi
 
@@ -832,9 +829,9 @@ install_openchoreo_control_plane() {
         "false" \
         "600" \
         "--version" "$OPENCHOREO_VERSION" \
-        "--values https://raw.githubusercontent.com/openchoreo/openchoreo/release-v0.7/install/k3d/single-cluster/values-cp.yaml" \
-        "--set global.defaultResources.enabled=false" \
-        "--set security.oidc.authorizationUrl=http://thunder.openchoreo.localhost:8089/oauth2/authorize"
+        "--values" "https://raw.githubusercontent.com/openchoreo/openchoreo/release-v0.7/install/k3d/single-cluster/values-cp.yaml" \
+        "--set" "global.defaultResources.enabled=false" \
+        "--set" "security.oidc.authorizationUrl=http://thunder.openchoreo.localhost:8089/oauth2/authorize"
     
     log_info "Waiting for Control Plane pods to be ready..."
     if ! kubectl wait --for=condition=Ready pod --all -n openchoreo-control-plane --timeout=600s 2>/dev/null; then
@@ -862,10 +859,18 @@ install_openchoreo_data_plane() {
         "false" \
         "600" \
         "--version" "$OPENCHOREO_VERSION" \
-        "--values https://raw.githubusercontent.com/openchoreo/openchoreo/release-v0.7/install/k3d/single-cluster/values-dp.yaml" \
+        "--values" "https://raw.githubusercontent.com/openchoreo/openchoreo/release-v0.7/install/k3d/single-cluster/values-dp.yaml" \
         "--set" "cert-manager.enabled=false" \
         "--set" "cert-manager.crds.enabled=false"
     
+     # Register the Data Plane
+    log_info "Registering Data Plane..."
+    if curl -s https://raw.githubusercontent.com/openchoreo/openchoreo/release-v0.7/install/add-data-plane.sh | bash -s -- --enable-agent --control-plane-context k3d-openchoreo-local --name default; then
+        log_success "Data Plane registered successfully"
+    else
+        log_warning "Data Plane registration script failed (non-fatal)"
+    fi
+
     log_info "Verifying Data Plane Resources"
     if kubectl get dataplane default -n default &>/dev/null; then
         log_success "Data Plane Resources verified"
@@ -884,13 +889,7 @@ install_openchoreo_data_plane() {
         log_warning "Some Data Plane pods may still be starting (non-fatal)"
     fi
 
-    # Register the Data Plane
-    log_info "Registering Data Plane..."
-    if curl -s https://raw.githubusercontent.com/openchoreo/openchoreo/release-v0.7/install/add-data-plane.sh | bash; then
-        log_success "Data Plane registered successfully"
-    else
-        log_warning "Data Plane registration script failed (non-fatal)"
-    fi
+   
 
     log_info "Configuring observability integration..."
 
@@ -929,7 +928,7 @@ install_openchoreo_observability_plane() {
         "true" \
         "900" \
         "--version" "$OPENCHOREO_VERSION" \
-        "--values https://raw.githubusercontent.com/openchoreo/openchoreo/release-v0.7/install/k3d/single-cluster/values-op.yaml"
+        "--values" "https://raw.githubusercontent.com/openchoreo/openchoreo/release-v0.7/install/k3d/single-cluster/values-op.yaml"
     
     log_info "Waiting for Observability Plane pods to be ready..."
     if ! kubectl wait --for=condition=Ready pod --all -n openchoreo-observability-plane --timeout=900s 2>/dev/null; then
@@ -1019,8 +1018,16 @@ install_openchoreo_build_plane() {
         "true" \
         "600" \
         "--version" "$OPENCHOREO_VERSION" \
-        "--values https://raw.githubusercontent.com/openchoreo/openchoreo/release-v0.7/install/k3d/single-cluster/values-bp.yaml"
+        "--values" "https://raw.githubusercontent.com/openchoreo/openchoreo/release-v0.7/install/k3d/single-cluster/values-bp.yaml"
 
+      # Register the Build Plane
+    log_info "Registering Build Plane..."
+    if curl -s https://raw.githubusercontent.com/openchoreo/openchoreo/release-v0.7/install/add-build-plane.sh | bash -s -- --enable-agent --control-plane-context k3d-openchoreo-local --name default; then
+        log_success "Build Plane registered successfully"
+    else
+        log_warning "Build Plane registration script failed (non-fatal)"
+    fi
+    
     log_info "Verifying Build Plane Resources"
     if kubectl get buildplane default -n default &>/dev/null; then
         log_success "BuildPlane resource found"
@@ -1038,14 +1045,7 @@ install_openchoreo_build_plane() {
     if ! kubectl wait --for=condition=Ready pod --all -n openchoreo-build-plane --timeout=600s 2>/dev/null; then
         log_warning "Some Build Plane pods may still be starting (non-fatal)"
     fi
-        # Configure Build Plane
-    log_info "Configuring Build Plane..."
-    if curl -s https://raw.githubusercontent.com/openchoreo/openchoreo/release-v0.7/install/add-build-plane.sh | bash; then
-        log_success "Build Plane configured successfully"
-    else
-        log_warning "Build Plane configuration script failed (non-fatal)"
-    fi
-
+   
     if kubectl get buildplane default -n default &>/dev/null; then
         kubectl patch buildplane default -n default --type merge \
             -p '{"spec":{"observer":{"url":"http://observer.openchoreo-observability-plane:8080","authentication":{"basicAuth":{"username":"dummy","password":"dummy"}}}}}' \
