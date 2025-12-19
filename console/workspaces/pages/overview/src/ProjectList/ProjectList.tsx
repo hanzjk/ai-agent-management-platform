@@ -16,130 +16,324 @@
  * under the License.
  */
 
-import { NoDataFound, PageLayout } from "@agent-management-platform/views";
-import { useListProjects } from "@agent-management-platform/api-client";
+import {
+  FadeIn,
+  NoDataFound,
+  PageLayout,
+} from "@agent-management-platform/views";
+import {
+  useDeleteProject,
+  useListProjects,
+} from "@agent-management-platform/api-client";
 import { generatePath, Link, useParams } from "react-router-dom";
-import { absoluteRouteMap, ProjectResponse } from "@agent-management-platform/types";
-import { alpha, Avatar, Box, ButtonBase, Card, TextField, Typography, useTheme } from "@mui/material";
+import {
+  absoluteRouteMap,
+  ProjectResponse,
+} from "@agent-management-platform/types";
+import {
+  Avatar,
+  Box,
+  Button,
+  ButtonBase,
+  Card,
+  CardContent,
+  CircularProgress,
+  IconButton,
+  Skeleton,
+  TextField,
+  Typography,
+  useTheme,
+} from "@wso2/oxygen-ui";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { PersonOutline, SearchRounded, TimerOutlined } from "@mui/icons-material";
-import { useMemo, useState } from "react";
+import {
+  Package,
+  Plus,
+  RefreshCcw,
+  Search as SearchRounded,
+  Clock as TimerOutlined,
+  Trash2,
+} from "@wso2/oxygen-ui-icons-react";
+import { useCallback, useMemo, useState } from "react";
+import { useConfirmationDialog } from "@agent-management-platform/shared-component";
 
 dayjs.extend(relativeTime);
 
-function ProjectCard(props: { project: ProjectResponse }) {
-    const { project } = props;
-    const theme = useTheme();
-    const { orgId } = useParams();
-    return (
-        <ButtonBase
-            component={Link}
-            to={generatePath(absoluteRouteMap.children.org.children.projects.path,
-                { orgId: orgId, projectId: project.name })}
+const projectGridTemplate = {
+  xs: "repeat(1, minmax(0, 1fr))",
+  md: "repeat(2, minmax(0, 1fr))",
+  lg: "repeat(3, minmax(0, 1fr))",
+  xl: "repeat(4, minmax(0, 1fr))",
+};
+
+function ProjectCard(props: {
+  project: ProjectResponse;
+  handleDeleteProject: (project: ProjectResponse) => void;
+}) {
+  const { project, handleDeleteProject } = props;
+  const theme = useTheme();
+  const { orgId } = useParams();
+  return (
+    <FadeIn>
+      <ButtonBase
+        sx={{
+          width: "100%",
+        }}
+        component={Link}
+        to={generatePath(absoluteRouteMap.children.org.children.projects.path, {
+          orgId: orgId,
+          projectId: project.name,
+        })}
+      >
+        <Card
+          sx={{
+            width: "100%",
+            transition: theme.transitions.create(["all"], {
+              duration: theme.transitions.duration.short,
+            }),
+            p: 1,
+            pb: 0,
+            pt: 4,
+            "& .delete-project-button": {
+              opacity: 0,
+              transition: theme.transitions.create(["all"], {
+                duration: theme.transitions.duration.short,
+              }),
+            },
+            "&.MuiCard-root": {
+              backgroundColor: "background.paper",
+            },
+            "&:hover": {
+              "& .delete-project-button": {
+                opacity: 1,
+              },
+              borderColor: "primary.main",
+              backgroundColor: "background.main",
+              transform: "translateY(-2px)",
+            },
+          }}
         >
-            <Card
+          <CardContent>
+            <Box display="flex" alignItems="center" gap={2}>
+              <Avatar
+                sx={{
+                  height: 40,
+                  width: 40,
+                  "&.MuiAvatar-root": {
+                    transition: theme.transitions.create(["all"], {
+                      duration: theme.transitions.duration.short,
+                    }),
+                    bgcolor: "primary.light",
+                    color: "background.paper",
+                  },
+                }}
+              >
+                <Package fontSize="inherit" size={24} />
+              </Avatar>
+              <Box
+                display="flex"
+                flexDirection="column"
+                alignItems="flex-start"
+              >
+                <Typography variant="h5" noWrap textOverflow="ellipsis" maxWidth="70%">
+                  {project.displayName}
+                </Typography>
+                <Typography variant="caption">
+                  {project.description ? project.description : "No description"}
+                </Typography>
+              </Box>
+            </Box>
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              mt={4}
             >
-                <Box
-                    sx={{
-                        display: 'flex',
-                        width: theme.spacing(40),
-                        height: theme.spacing(20),
-                        flexDirection: 'column',
-                        gap: 2,
-                        p: theme.spacing(2),
-                        justifyContent: 'flex-start',
-                        alignItems: 'flex-start',
-                        "&:hover": {
-                            backgroundColor: theme.palette.action.hover,
-                        },
-                    }}
-                >
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
+              <Typography
+                variant="body2"
+                color="textSecondary"
+                sx={{
+   
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                }}
+              >
+                <TimerOutlined size={16} opacity={0.5} />
+                &nbsp;
+                {dayjs(project.createdAt).fromNow()}
+              </Typography>
+              <IconButton
+                size="small"
+                color="error"
+                className="delete-project-button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleDeleteProject(project);
+                }}
+              >
+                <Trash2 size={16} />
+              </IconButton>
+            </Box>
+          </CardContent>
+        </Card>
+      </ButtonBase>
+    </FadeIn>
+  );
+}
 
-                        }}
-                    >
-                        <Avatar sx={{ background: `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.5)} 30%, ${alpha(theme.palette.secondary.main, 0.5)} 90%)` }} >
-                            <PersonOutline fontSize="inherit" />
-                        </Avatar>
-                        <Box
-                            sx={{
-                                p: 2,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'flex-start',
-                            }}>
-                            <Typography variant="h6">{project.displayName}</Typography>
-                            <Typography variant="body2" color="text.secondary">{project.description ?
-                                project.description : 'No description'}
-                            </Typography>
-                        </Box>
-
-                    </Box>
-                    <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'flex-start',
-                        }}
-                    >
-                        <TimerOutlined fontSize="inherit" />
-                        &nbsp;
-                        {dayjs(project.createdAt).fromNow()}
-                    </Typography>
-                </Box>
-            </Card>
-        </ButtonBase>
-    );
+function SkeletonPageLayout() {
+  return (
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: projectGridTemplate,
+        gap: 2,
+        width: "100%",
+      }}
+    >
+      {Array.from({ length: 4 }).map((_, index) => (
+        <Skeleton
+          key={index}
+          variant="rounded"
+          height={160}
+          sx={{ width: "100%" }}
+        />
+      ))}
+    </Box>
+  );
 }
 
 export function ProjectList() {
-    const { orgId } = useParams();
-    const { data: projects } = useListProjects({
-        orgName: orgId ?? 'default',
-    });
-    const theme = useTheme();
-    const [search, setSearch] = useState('');
+  const { orgId } = useParams();
+  const {
+    data: projects,
+    isRefetching,
+    refetch: refetchProjects,
+    isPending: isLoadingProjects,
+  } = useListProjects({
+    orgName: orgId,
+  });
+  const { addConfirmation } = useConfirmationDialog();
+  const { mutate: deleteProject, isPending: isDeletingProject } =
+    useDeleteProject();
 
-    const filteredProjects = useMemo(() =>
-        projects?.projects?.filter((project) =>
-            project.displayName.toLowerCase().includes(search.toLowerCase())) || [],
-        [projects, search]);
+  const handleDeleteProject = useCallback(
+    (project: ProjectResponse) => {
+      addConfirmation({
+        title: "Delete Project?",
+        description: `Are you sure you want to delete the project "${project.displayName}"? This action cannot be undone.`,
+        onConfirm: () => {
+          deleteProject({
+            orgName: orgId,
+            projName: project.name,
+          });
+        },
+        confirmButtonColor: "error",
+        confirmButtonIcon: <Trash2 size={16} />,
+        confirmButtonText: "Delete",
+      });
+    },
+    [addConfirmation, deleteProject, orgId]
+  );
 
-    return (
-        <PageLayout
-            title="Projects"
-            description="List of projects"
+  const [search, setSearch] = useState("");
+
+  const filteredProjects = useMemo(
+    () =>
+      projects?.projects?.filter((project) =>
+        project.displayName.toLowerCase().includes(search.toLowerCase())
+      ) || [],
+    [projects, search]
+  );
+
+  const handleRefresh = useCallback(() => {
+    refetchProjects();
+  }, [refetchProjects]);
+
+  return (
+    <PageLayout
+      title="Projects"
+      description="List of projects"
+      titleTail={
+        <Box
+          display="flex"
+          alignItems="center"
+          minWidth={32}
+          justifyContent="center"
         >
+          {isRefetching ? (
+            <CircularProgress size={18} color="primary" />
+          ) : (
+            <IconButton size="small" color="primary" onClick={handleRefresh}>
+              <RefreshCcw size={18} />
+            </IconButton>
+          )}
+        </Box>
+      }
+    >
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <Box display="flex" gap={2}>
+          <Box flexGrow={1}>
             <TextField
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                slotProps={{ input: { endAdornment: <SearchRounded fontSize='small' /> } }}
-                fullWidth
-                size='small'
-                sx={{
-                    m: theme.spacing(1, 0),
-                }}
-                variant='standard'
-                placeholder='Search agents'
-                disabled={!projects?.projects?.length}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              slotProps={{
+                input: { endAdornment: <SearchRounded size={16} /> },
+              }}
+              fullWidth
+              variant="outlined"
+              placeholder="Search Projects"
+              disabled={!projects?.projects?.length}
             />
-            <Box sx={{ display: 'inline-flex', flexWrap: 'wrap', gap: 2, py: theme.spacing(2) }}>
-                {filteredProjects?.map((project) => (
-                    <ProjectCard key={project.createdAt} project={project} />
-                ))}
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', pt: theme.spacing(10), height: '100%' }}>
-                {filteredProjects?.length === 0 && (
-                    <NoDataFound message="No projects found" subtitle="Create a new project to get started" icon={<PersonOutline fontSize="inherit" />} />
-                )}
-            </Box>
-        </PageLayout>
-    );
+          </Box>
+          <Button
+            variant="contained"
+            color="primary"
+            size="small"
+            startIcon={<Plus size={16} />}
+            component={Link}
+            to={generatePath(
+              absoluteRouteMap.children.org.children.newProject.path,
+              {
+                orgId: orgId,
+              }
+            )}
+          >
+            Add Project
+          </Button>
+        </Box>
+        {filteredProjects?.length === 0 && !isLoadingProjects && (
+          <NoDataFound
+            message="No Projects Found"
+            subtitle={
+              search
+                ? "Looks like there are no projects matching your search."
+                : "Create a New Project to Get Started"
+            }
+            iconElement={Package}
+          />
+        )}
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: projectGridTemplate,
+            gap: 2,
+            width: "100%",
+          }}
+        >
+          {!isDeletingProject &&
+            filteredProjects?.map((project) => (
+              <ProjectCard
+                key={project.name}
+                project={project}
+                handleDeleteProject={handleDeleteProject}
+              />
+            ))}
+        </Box>
+      </Box>
+      {(isLoadingProjects || isDeletingProject) && <SkeletonPageLayout />}
+    </PageLayout>
+  );
 }

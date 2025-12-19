@@ -16,183 +16,192 @@
  * under the License.
  */
 
-import { AppRegistration, Info } from "@mui/icons-material";
-import { Alert, Box, Card, CardContent, TextField, Typography, useTheme } from "@mui/material";
+import { Box, Card, CardContent, Typography } from "@wso2/oxygen-ui";
 import { useFormContext } from "react-hook-form";
-import { useEffect, useRef } from "react";
-
-// Generate a random 6-character string
-const generateRandomString = (length: number = 6): string => {
-    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-};
-
-// Convert display name to URL-friendly format
-const sanitizeNameForUrl = (displayName: string): string => {
-    return displayName
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-        .replace(/\s+/g, '-') // Replace spaces with hyphens
-        .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
-        .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
-};
+import { useEffect, useMemo } from "react";
+import { useParams } from "react-router-dom";
+import { debounce } from "lodash";
+import { TextInput } from "@agent-management-platform/views";
+import { useGenerateResourceName } from "@agent-management-platform/api-client";
 
 export const SourceAndConfiguration = () => {
-    const { register, formState: { errors }, watch, setValue } = useFormContext();
-    const theme = useTheme();
-    const isNameManuallyEdited = useRef(false);
-    const randomSuffix = useRef<string>('');
-    const displayName = watch('displayName');
+  const {
+    register,
+    formState: { errors },
+    watch,
+    setValue,
+  } = useFormContext();
+  const { orgId, projectId } = useParams<{ orgId: string; projectId: string }>();
+  const displayName = watch("displayName");
+  
+  const { mutate: generateName } = useGenerateResourceName({
+    orgName: orgId,
+  });
 
-    // Generate random suffix once
-    if (!randomSuffix.current) {
-        randomSuffix.current = generateRandomString(6);
-    }
-
-    // Auto-generate name from display name
-    useEffect(() => {
-        if (displayName && !isNameManuallyEdited.current) {
-            const sanitizedName = sanitizeNameForUrl(displayName);
-            if (sanitizedName) {
-                const generatedName = `${sanitizedName}-${randomSuffix.current}`;
-                setValue('name', generatedName, { 
-                    shouldValidate: true, 
-                    shouldDirty: true,
-                    shouldTouch: false 
-                });
-            }
-        } else if (!displayName && !isNameManuallyEdited.current) {
-            // Clear the name field if display name is empty
-            setValue('name', '', { 
-                shouldValidate: true, 
-                shouldDirty: true,
-                shouldTouch: false 
+  // Create debounced function for name generation
+  const debouncedGenerateName = useMemo(
+    () =>
+      debounce((name: string) => {
+        generateName({
+          displayName: name,
+          resourceType: 'agent',
+          projectName: projectId,
+        }, {
+          onSuccess: (data) => {
+            setValue("name", data.name, {
+              shouldValidate: true,
+              shouldDirty: true,
+              shouldTouch: false,
             });
-        }
-    }, [displayName, setValue]);
+          },
+          onError: (error) => {
+            // eslint-disable-next-line no-console
+            console.error('Failed to generate name:', error);
+          }
+        });
+      }, 500), // 500ms delay
+    [generateName, setValue, projectId, orgId]
+  );
 
-    return (
-        <Card variant="outlined">
-            <CardContent>
-                <Box display="flex" flexDirection="row" alignItems="center" gap={1}>
-                    <AppRegistration fontSize="medium" color="disabled" />
-                    <Typography variant="h5">
-                        Source & Configuration
-                    </Typography>
-                </Box>
-                <Typography variant="body2" color="text.secondary">
-                    Connect your GitHub repository and configure basics
-                </Typography>
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      debouncedGenerateName.cancel();
+    };
+  }, [debouncedGenerateName]);
 
-                <Box display="flex" flexDirection="column" gap={2} pt={2}>
-                    <TextField
-                        placeholder="e.g., Customer Support Agent"
-                        label="Display Name"
-                        fullWidth
-                        error={!!errors.displayName}
-                        helperText={errors.displayName?.message as string || "Human-readable name for your agent"}
-                        {...register('displayName')}
-                    />
+  // Auto-generate name from display name using API with debounce
+  useEffect(() => {
+    if (displayName) {
+      debouncedGenerateName(displayName);
+    } else if (!displayName) {
+      // Clear the name field if display name is empty
+      debouncedGenerateName.cancel();
+      setValue("name", "", {
+        shouldValidate: true,
+        shouldDirty: true,
+        shouldTouch: false,
+      });
+    }
+  }, [displayName, setValue, debouncedGenerateName]);
 
-                    <TextField
-                        placeholder="e.g., customer-support-agent"
-                        label="Agent Name"
-                        fullWidth
-                        error={!!errors.name}
-                        helperText={errors.name?.message as string || "Use lowercase letters, numbers, and hyphens only (used in URLs)"}
-                        {...register('name', {
-                            onChange: () => {
-                                isNameManuallyEdited.current = true;
-                            }
-                        })}
-                    />
+  return (
+    <>
+      <Card variant="outlined">
+        <CardContent sx={{ gap: 1, display: "flex", flexDirection: "column" }}>
+          <Typography variant="h5">Agent Details</Typography>
+          <Box display="flex" flexDirection="column" gap={1}>
+            <TextInput
+              placeholder="e.g., Customer Support Agent"
+              label="Name"
+              fullWidth
+              size="small"
+              error={!!errors.displayName}
+              helperText={
+                (errors.displayName?.message as string) ||
+                "A name for your agent"
+              }
+              {...register("displayName")}
+            />
+            <TextInput
+              placeholder="Short description of what this agent does"
+              label="Description (optional)"
+              fullWidth
+              size="small"
+              multiline
+              minRows={2}
+              maxRows={6}
+              error={!!errors.description}
+              helperText={errors.description?.message as string}
+              {...register("description")}
+            />
+          </Box>
+        </CardContent>
+      </Card>
+      <Card variant="outlined">
+        <CardContent sx={{ gap: 1, display: "flex", flexDirection: "column" }}>
+          <Typography variant="h5">Repository Details</Typography>
+          <Box display="flex" flexDirection="column" gap={1}>
+            <TextInput
+              placeholder="https://github.com/username/repo"
+              label="GitHub Repository"
+              fullWidth
+              size="small"
+              error={!!errors.repositoryUrl}
+              helperText={errors.repositoryUrl?.message as string}
+              {...register("repositoryUrl")}
+            />
 
-                    <TextField
-                        placeholder="Short description of what this agent does"
-                        label="Description (optional)"
-                        fullWidth
-                        multiline
-                        minRows={2}
-                        maxRows={6}
-                        sx={{
-                            "& .MuiInputBase-root": {
-                                padding: theme.spacing(0),
-                            },
-                        }}
-                        error={!!errors.description}
-                        helperText={errors.description?.message as string}
-                        {...register('description')}
-                    />
+            <Box display="flex" flexDirection="row" gap={1}>
+              <TextInput
+                placeholder="main"
+                label="Branch"
+                fullWidth
+                size="small"
+                error={!!errors.branch}
+                helperText={errors.branch?.message as string}
+                {...register("branch")}
+              />
+              <TextInput
+                placeholder="my-agent"
+                label="Project Path"
+                fullWidth
+                size="small"
+                error={!!errors.appPath}
+                helperText={errors.appPath?.message as string}
+                {...register("appPath")}
+              />
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+      <Card variant="outlined">
+        <CardContent sx={{ gap: 1, display: "flex", flexDirection: "column" }}>
+          <Typography variant="h5">Build Details</Typography>
+          <Box display="flex" flexDirection="column" gap={1}>
+            <Box display="flex" flexDirection="row" gap={1}>
+              <TextInput
+                placeholder="python"
+                disabled
+                label="Language"
+                fullWidth
+                size="small"
+                error={!!errors.language}
+                helperText={
+                  (errors.language?.message as string) ||
+                  "e.g., python, nodejs, go"
+                }
+                {...register("language")}
+              />
+              <TextInput
+                placeholder="3.11"
+                label="Language Version"
+                fullWidth
+                size="small"
+                error={!!errors.languageVersion}
+                helperText={
+                  (errors.languageVersion?.message as string) ||
+                  "e.g., 3.11, 20, 1.21"
+                }
+                {...register("languageVersion")}
+              />
+            </Box>
 
-                    <TextField
-                        placeholder="https://github.com/username/repo"
-                        label="GitHub Repository"
-                        fullWidth
-                        error={!!errors.repositoryUrl}
-                        helperText={errors.repositoryUrl?.message as string}
-                        {...register('repositoryUrl')}
-                    />
-
-                    <Box display="flex" flexDirection="row" gap={2}>
-                        <TextField
-                            placeholder="main"
-                            label="Branch"
-                            fullWidth
-                            error={!!errors.branch}
-                            helperText={errors.branch?.message as string}
-                            {...register('branch')}
-                        />
-                        <TextField
-                            placeholder="/ (root directory)"
-                            label="Project Path"
-                            fullWidth
-                            error={!!errors.appPath}
-                            helperText={errors.appPath?.message as string}
-                            {...register('appPath')}
-                        />
-                    </Box>
-
-                    <Box display="flex" flexDirection="row" gap={2}>
-                        <TextField
-                            placeholder="python"
-                            disabled
-                            label="Language"
-                            fullWidth
-                            error={!!errors.language}
-                            helperText={errors.language?.message as string || "e.g., python, nodejs, go"}
-                            {...register('language')}
-                        />
-                        <TextField
-                            placeholder="3.11"
-                            label="Language Version"
-                            fullWidth
-                            error={!!errors.languageVersion}
-                            helperText={errors.languageVersion?.message as string || "e.g., 3.11, 20, 1.21"}
-                            {...register('languageVersion')}
-                        />
-                    </Box>
-
-                    <TextField
-                        placeholder="python main.py"
-                        label="Start Command"
-                        fullWidth
-                        error={!!errors.runCommand}
-                        helperText={errors.runCommand?.message as string || "Dependencies auto-install from package.json, requirements.txt, or pyproject.toml"}
-                        {...register('runCommand')}
-                    />
-
-                    <Alert severity="warning" icon={<Info />} variant="outlined">
-                        {`All deployments go to Development first. After testing, promote to production from the agent details page.`}
-                    </Alert>
-                </Box>
-            </CardContent>
-        </Card>
-    );
+            <TextInput
+              placeholder="python main.py"
+              label="Start Command"
+              fullWidth
+              size="small"
+              error={!!errors.runCommand}
+              helperText={
+                (errors.runCommand?.message as string) ||
+                "Dependencies auto-install from package.json, requirements.txt, or pyproject.toml"
+              }
+              {...register("runCommand")}
+            />
+          </Box>
+        </CardContent>
+      </Card>
+    </>
+  );
 };
-
-

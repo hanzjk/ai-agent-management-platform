@@ -16,19 +16,20 @@
  * under the License.
  */
 
-export { DataListingTable, renderStatusChip, renderMetrics } from './DataListingTable';
+export { DataListingTable, renderStatusChip } from './DataListingTable';
 export { TableHeader } from './subcomponents/TableHeader';
 export { TableBody } from './subcomponents/TableBody';
 export { TableRow } from './subcomponents/TableRow';
 export { ActionMenu } from './subcomponents/ActionMenu';
 export { LoadingState } from './subcomponents/LoadingState';
-export { EmptyState } from './subcomponents/EmptyState';
 
 export type { 
   TableColumn, 
   StatusConfig, 
   MetricsData, 
-  DataListingTableProps 
+  DataListingTableProps,
+  SortModel,
+  InitialState
 } from './DataListingTable';
 
 export type { TableHeaderProps } from './subcomponents/TableHeader';

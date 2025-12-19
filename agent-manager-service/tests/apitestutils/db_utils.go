@@ -25,8 +25,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
-	"github.com/wso2-enterprise/agent-management-platform/agent-manager-service/db"
-	"github.com/wso2-enterprise/agent-management-platform/agent-manager-service/models"
+	"github.com/wso2/ai-agent-management-platform/agent-manager-service/db"
+	"github.com/wso2/ai-agent-management-platform/agent-manager-service/models"
 )
 
 func CreateOrganization(t *testing.T, orgID uuid.UUID, userIdpID uuid.UUID, orgName string) models.Organization {
@@ -59,10 +59,10 @@ func CreateProject(t *testing.T, projectID uuid.UUID, orgID uuid.UUID, projectNa
 	return *project
 }
 
-func CreateAgent(t *testing.T, agentID uuid.UUID, orgID uuid.UUID, projectID uuid.UUID, agentName string, agentType string) models.Agent {
+func CreateAgent(t *testing.T, agentID uuid.UUID, orgID uuid.UUID, projectID uuid.UUID, agentName string, provisioningType string) models.Agent {
 	agent := &models.Agent{
 		ID:          agentID,
-		AgentType:   agentType,
+		ProvisioningType:   provisioningType,
 		ProjectId:   projectID,
 		OrgID:       orgID,
 		Name:        agentName,

@@ -1,0 +1,51 @@
+{{- if .Values.tracesObserver.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.tracesObserver.name }}
+  namespace: {{ .Values.tracesObserver.namespace }}
+spec:
+  replicas: {{ .Values.tracesObserver.replicaCount }}
+  selector:
+    matchLabels:
+      app: traces-observer
+  template:
+    metadata:
+      labels:
+        app: traces-observer
+    spec:
+      containers:
+        - name: traces-observer
+          # if developmentMode is true, use latest image for easier debugging
+          {{- if .Values.tracesObserver.developmentMode }}
+          image: amp-traces-observer:0.0.0-dev
+          {{- else }}
+          image: {{ .Values.tracesObserver.image.repository }}:{{ .Values.tracesObserver.image.tag }}
+          {{- end }}
+          imagePullPolicy: {{ .Values.tracesObserver.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.tracesObserver.port }}
+          env:
+            - name: TRACES_OBSERVER_PORT
+              value: "{{ .Values.tracesObserver.port }}"
+            - name: OPENSEARCH_ADDRESS
+              value: {{ .Values.tracesObserver.env.opensearchAddress }}
+            - name: OPENSEARCH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: opensearch-credentials
+                  key: username
+            - name: OPENSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opensearch-credentials
+                  key: password
+          resources:
+            limits:
+              memory: {{ .Values.tracesObserver.resourceLimits.memory }}
+              cpu: {{ .Values.tracesObserver.resourceLimits.cpu }}
+            requests:
+              memory: {{ .Values.tracesObserver.resourceRequests.memory }}
+              cpu: {{ .Values.tracesObserver.resourceRequests.cpu }}
+{{- end }}

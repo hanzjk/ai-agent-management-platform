@@ -20,12 +20,11 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/wso2-enterprise/agent-management-platform/agent-manager-service/middleware/logger"
-	"github.com/wso2-enterprise/agent-management-platform/agent-manager-service/services"
+	"github.com/wso2/ai-agent-management-platform/agent-manager-service/middleware/logger"
+	"github.com/wso2/ai-agent-management-platform/agent-manager-service/services"
 )
 
 type BuildCallbackPayload struct {
-	ImageID     string `json:"imageId"`
 	AgentName   string `json:"agentName"`
 	ProjectName string `json:"projectName"`
 	OrgName     string `json:"orgName"`
@@ -64,6 +63,14 @@ func (b *buildCIController) HandleBuildCallback(w http.ResponseWriter, r *http.R
 
 	log.Info("Build callback received", "payload", payload)
 
-	b.buildCIManagerService.HandleBuildCallback(ctx, payload.AgentName, payload.ProjectName, payload.OrgName, payload.ImageID)
-	writeJSONResponse(w, http.StatusAccepted, map[string]string{"status": "accepted"})
+	workloadCR, err := b.buildCIManagerService.HandleBuildCallback(ctx, payload.OrgName, payload.ProjectName, payload.AgentName)
+	if err != nil {
+		log.Error("HandleBuildCallback: failed to process callback", "error", err)
+		writeJSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "Failed to process build callback"})
+		return
+	}
+	// Write the workload CR as plain text/YAML instead of JSON-encoding it
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(workloadCR))
 }

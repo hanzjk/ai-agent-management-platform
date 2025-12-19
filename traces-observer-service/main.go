@@ -26,11 +26,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/wso2-enterprise/agent-management-platform/traces-observer-service/config"
-	"github.com/wso2-enterprise/agent-management-platform/traces-observer-service/controllers"
-	"github.com/wso2-enterprise/agent-management-platform/traces-observer-service/handlers"
-	"github.com/wso2-enterprise/agent-management-platform/traces-observer-service/middleware"
-	"github.com/wso2-enterprise/agent-management-platform/traces-observer-service/opensearch"
+	"github.com/wso2/ai-agent-management-platform/traces-observer-service/config"
+	"github.com/wso2/ai-agent-management-platform/traces-observer-service/controllers"
+	"github.com/wso2/ai-agent-management-platform/traces-observer-service/handlers"
+	"github.com/wso2/ai-agent-management-platform/traces-observer-service/middleware"
+	"github.com/wso2/ai-agent-management-platform/traces-observer-service/opensearch"
 )
 
 func main() {
@@ -57,8 +57,8 @@ func main() {
 
 	// Setup routes
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/traces", handler.GetTraceOverviews)
-	mux.HandleFunc("/api/trace", handler.GetTraceByIdAndService)
+	mux.HandleFunc("/api/v1/traces", handler.GetTraceOverviews)
+	mux.HandleFunc("/api/v1/trace", handler.GetTraceByIdAndService)
 	mux.HandleFunc("/health", handler.Health)
 
 	// Apply CORS middleware

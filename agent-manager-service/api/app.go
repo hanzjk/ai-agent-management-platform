@@ -19,10 +19,10 @@ package api
 import (
 	"net/http"
 
-	"github.com/wso2-enterprise/agent-management-platform/agent-manager-service/config"
-	"github.com/wso2-enterprise/agent-management-platform/agent-manager-service/middleware"
-	"github.com/wso2-enterprise/agent-management-platform/agent-manager-service/middleware/logger"
-	"github.com/wso2-enterprise/agent-management-platform/agent-manager-service/wiring"
+	"github.com/wso2/ai-agent-management-platform/agent-manager-service/config"
+	"github.com/wso2/ai-agent-management-platform/agent-manager-service/middleware"
+	"github.com/wso2/ai-agent-management-platform/agent-manager-service/middleware/logger"
+	"github.com/wso2/ai-agent-management-platform/agent-manager-service/wiring"
 )
 
 // MakeHTTPHandler creates a new HTTP handler with middleware and routes
@@ -36,13 +36,14 @@ func MakeHTTPHandler(params *wiring.AppParams) http.Handler {
 	apiMux := http.NewServeMux()
 	registerAgentRoutes(apiMux, params.AgentController)
 	registerInfraRoutes(apiMux, params.InfraResourceController)
+	registerObservabilityRoutes(apiMux, params.ObservabilityController)
 
 	// Apply middleware in reverse order (last middleware is applied first)
 	apiHandler := http.Handler(apiMux)
-	apiHandler = middleware.CORS(config.GetConfig().CORSAllowedOrigin)(apiHandler)
 	apiHandler = params.AuthMiddleware(apiHandler)
 	apiHandler = middleware.AddCorrelationID()(apiHandler)
 	apiHandler = logger.RequestLogger()(apiHandler)
+	apiHandler = middleware.CORS(config.GetConfig().CORSAllowedOrigin)(apiHandler)
 	apiHandler = middleware.RecovererOnPanic()(apiHandler)
 
 	// Create a mux for internal API routes
