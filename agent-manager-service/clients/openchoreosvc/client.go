@@ -303,7 +303,7 @@ func (k *openChoreoSvcClient) CreateAgentComponent(ctx context.Context, orgName 
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -795,6 +795,7 @@ func (k *openChoreoSvcClient) ListOrgEnvironments(ctx context.Context, orgName s
 	var environments []*models.EnvironmentResponse
 	for _, env := range environmentList.Items {
 		environments = append(environments, &models.EnvironmentResponse{
+			UUID:         string(env.UID),
 			Name:         env.Name,
 			DataplaneRef: env.Spec.DataPlaneRef,
 			CreatedAt:    env.CreationTimestamp.Time,
@@ -1050,7 +1051,7 @@ func (k *openChoreoSvcClient) ListProjects(ctx context.Context, orgName string) 
 	var projects []*models.ProjectResponse
 	for _, project := range projectList.Items {
 		projects = append(projects, &models.ProjectResponse{
-			UUID: string(project.UID),
+			UUID:               string(project.UID),
 			Name:               project.Name,
 			OrgName:            project.Namespace,
 			CreatedAt:          project.CreationTimestamp.Time,

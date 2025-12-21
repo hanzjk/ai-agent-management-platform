@@ -45,7 +45,7 @@ func ConvertToAgentResponse(component *models.AgentResponse) spec.AgentResponse 
 
 func convertToInternalAgentResponse(component *models.AgentResponse) spec.AgentResponse {
 	return spec.AgentResponse{
-		Uuid: component.UUID,
+		Uuid:        component.UUID,
 		Name:        component.Name,
 		DisplayName: component.DisplayName,
 		Description: component.Description,
@@ -72,7 +72,7 @@ func convertToInternalAgentResponse(component *models.AgentResponse) spec.AgentR
 
 func convertToExternalAgentResponse(component *models.AgentResponse) spec.AgentResponse {
 	return spec.AgentResponse{
-		Uuid:  component.UUID,
+		Uuid:        component.UUID,
 		Name:        component.Name,
 		DisplayName: component.DisplayName,
 		Description: component.Description,
@@ -227,6 +227,7 @@ func ConvertToEnvironmentResponse(env *models.EnvironmentResponse) spec.Environm
 	}
 
 	return spec.Environment{
+		Uuid:         env.UUID,
 		Name:         env.Name,
 		DataplaneRef: env.DataplaneRef,
 		IsProduction: env.IsProduction,
@@ -323,7 +324,7 @@ func ConvertToProjectResponse(project *models.ProjectResponse) spec.ProjectRespo
 	}
 
 	return spec.ProjectResponse{
-		Uuid:                project.UUID,
+		Uuid:               project.UUID,
 		Name:               project.Name,
 		DisplayName:        project.DisplayName,
 		Description:        project.Description,

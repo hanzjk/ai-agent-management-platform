@@ -140,10 +140,10 @@ func createComponentCRForInternalAgents(orgName, projectName string, req *spec.C
 		string(AnnotationKeyDescription): utils.StrPointerAsStr(req.Description, ""),
 	}
 	labels := map[string]string{
-		string(LabelKeyProvisioningType): req.Provisioning.Type,
-		string(LabelKeyAgentSubType):     utils.StrPointerAsStr(req.AgentType.SubType, ""),
-		string(LabelKeyAgentLanguage):    req.RuntimeConfigs.Language,
-		string(LabelKeyAgentLanguageVersion): utils.StrPointerAsStr(req.RuntimeConfigs.LanguageVersion,""),
+		string(LabelKeyProvisioningType):     req.Provisioning.Type,
+		string(LabelKeyAgentSubType):         utils.StrPointerAsStr(req.AgentType.SubType, ""),
+		string(LabelKeyAgentLanguage):        req.RuntimeConfigs.Language,
+		string(LabelKeyAgentLanguageVersion): utils.StrPointerAsStr(req.RuntimeConfigs.LanguageVersion, ""),
 	}
 	componentType := getOpenChoreoComponentType(req.Provisioning.Type, req.AgentType.Type)
 	componentWorkflow := getOpenChoreoComponentWorkflow(req.RuntimeConfigs.Language)
@@ -250,20 +250,9 @@ func createOTELInstrumentationTrait(ocAgentComponent *v1alpha1.Component, envUUI
 func getInstrumentationImage(languageVersion string) string {
 	// Extract major.minor version (e.g., "3.10.5" -> "3.10")
 	parts := strings.Split(languageVersion, ".")
-	if len(parts) >= 2 {
-		majorMinor := parts[0] + "." + parts[1]
-		switch majorMinor {
-		case "3.10":
-			return config.GetConfig().OTEL.OTELInstrumentationImage.Python310
-		case "3.11":
-			return config.GetConfig().OTEL.OTELInstrumentationImage.Python311
-		case "3.12":
-			return config.GetConfig().OTEL.OTELInstrumentationImage.Python312
-		case "3.13":
-			return config.GetConfig().OTEL.OTELInstrumentationImage.Python313
-		}
-	}
-	return ""
+	pythonMajorMinor := parts[0] + "." + parts[1]		
+	imageTag := config.GetConfig().PackageVersion
+	return fmt.Sprintf("%s/%s:%s-python%s", GithubImageRegistry, ImageName, imageTag, pythonMajorMinor)
 }
 
 func createComponentWorkflowRunCR(orgName, projName, componentName string, systemParams v1alpha1.SystemParametersValues, component *v1alpha1.Component) *v1alpha1.ComponentWorkflowRun {
