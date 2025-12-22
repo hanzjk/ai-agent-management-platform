@@ -223,15 +223,15 @@ func createComponentCRForInternalAgents(orgName, projectName string, req *spec.C
 	return componentCR, nil
 }
 
-func createOTELInstrumentationTrait(ocAgentComponent *v1alpha1.Component, envUUID, projectUUID string) (*v1alpha1.ComponentTrait, error) {
+func createOTELInstrumentationTrait(ocAgentComponent *v1alpha1.Component, envUUID string) (*v1alpha1.ComponentTrait, error) {
 	traitParameters := map[string]interface{}{
 		"instrumentationImage":  getInstrumentationImage(ocAgentComponent.Labels[string(LabelKeyAgentLanguageVersion)]),
 		"sdkVolumeName":         config.GetConfig().OTEL.SDKVolumeName,
 		"sdkMountPath":          config.GetConfig().OTEL.SDKMountPath,
-		"agentName":             ocAgentComponent.Name,
 		"otelEndpoint":          config.GetConfig().OTEL.ExporterEndpoint,
 		"isTraceContentEnabled": utils.BoolAsString(config.GetConfig().OTEL.IsTraceContentEnabled),
-		"traceAttributes":       fmt.Sprintf("%s=%s,%s=%s,%s=%s", TraceAttributeKeyProject, projectUUID, TraceAttributeKeyEnvironment, envUUID, TraceAttributeKeyComponent, ocAgentComponent.UID),
+		"traceAttributes":       fmt.Sprintf("%s=%s,%s=%s", TraceAttributeKeyEnvironment, envUUID, TraceAttributeKeyComponent, ocAgentComponent.UID),
+		"agentApiKey":           uuid.New().String(),
 	}
 	traitParametersJSON, err := json.Marshal(traitParameters)
 	if err != nil {
@@ -250,7 +250,7 @@ func createOTELInstrumentationTrait(ocAgentComponent *v1alpha1.Component, envUUI
 func getInstrumentationImage(languageVersion string) string {
 	// Extract major.minor version (e.g., "3.10.5" -> "3.10")
 	parts := strings.Split(languageVersion, ".")
-	pythonMajorMinor := parts[0] + "." + parts[1]		
+	pythonMajorMinor := parts[0] + "." + parts[1]
 	imageTag := config.GetConfig().PackageVersion
 	return fmt.Sprintf("%s/%s:%s-python%s", GithubImageRegistry, ImageName, imageTag, pythonMajorMinor)
 }
