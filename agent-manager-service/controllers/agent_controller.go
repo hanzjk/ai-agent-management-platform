@@ -323,7 +323,7 @@ func (c *agentController) BuildAgent(w http.ResponseWriter, r *http.Request) {
 	utils.WriteSuccessResponse(w, http.StatusAccepted, build)
 }
 
-func (c *agentController) GetBuildLogs(w http.ResponseWriter, r *http.Request) {
+func (c *agentController)      GetBuildLogs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := logger.GetLogger(ctx)
 
