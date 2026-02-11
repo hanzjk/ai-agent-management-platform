@@ -6,11 +6,20 @@ from traceloop.sdk import Traceloop
 class SimpleAgent:
     def __init__(self):
         # Initialize Traceloop for tracing
+        # Read env variables first
+        api_endpoint = os.getenv("AMP_OTEL_ENDPOINT")
+        api_key = os.getenv("AMP_AGENT_API_KEY")
+        
+        # Print them BEFORE init
+        print(f"AMP_OTEL_ENDPOINT: {api_endpoint}")
+        print(f"AMP_AGENT_API_KEY: {api_key}")
+        
+        # Then initialize
         Traceloop.init(
             app_name="simple-openai-agent",
-            api_endpoint=os.getenv("AMP_OTEL_ENDPOINT"),
+            api_endpoint=api_endpoint,
             disable_batch=True,
-            headers={"x-amp-api-key": os.getenv("AMP_AGENT_API_KEY")},
+            headers={"x-amp-api-key": api_key},
         )
 
         # Initialize OpenAI client
