@@ -1,7 +1,8 @@
 import os
+from typing import Union
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from agent import SimpleAgent
 from dotenv import load_dotenv
 
@@ -16,8 +17,13 @@ agent = SimpleAgent()
 
 class ChatRequest(BaseModel):
     message: str
-    session_id: str
+    session_id: Union[str, int]
     context: dict = None
+
+    @field_validator('session_id')
+    @classmethod
+    def convert_session_id_to_string(cls, v):
+        return str(v)
 
 
 @app.get("/")
