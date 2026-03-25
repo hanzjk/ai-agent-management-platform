@@ -204,7 +204,7 @@ spec:
           - matches:
             - path:
                 type: PathPrefix
-                value: /${metadata.componentName}-${endpoint}
+                value: /${metadata.componentUID.substring(0, 8)}-${endpoint}
             filters:
               - type: URLRewrite
                 urlRewrite:
