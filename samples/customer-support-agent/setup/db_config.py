@@ -6,8 +6,8 @@ The database is automatically seeded on first run.
 import sqlite3
 from pathlib import Path
 
-# Database file location (in the app directory)
-DB_DIR = Path(__file__).parent.parent / "data"
+# Database file location (mounted as emptyDir volume in container)
+DB_DIR = Path("/data")
 DB_PATH = DB_DIR / "travel.sqlite"
 
 
