@@ -34,10 +34,10 @@ def search_car_rentals(
     params = []
 
     if location:
-        query += " AND location LIKE %s"
+        query += " AND location LIKE ?"
         params.append(f"%{location}%")
     if name:
-        query += " AND name LIKE %s"
+        query += " AND name LIKE ?"
         params.append(f"%{name}%")
     # For our tutorial, we will let you match on any dates and price tier.
     # (since our toy dataset doesn't have much data)
@@ -65,7 +65,7 @@ def book_car_rental(rental_id: int) -> str:
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("UPDATE car_rentals SET booked = 1 WHERE id = %s", (rental_id,))
+    cursor.execute("UPDATE car_rentals SET booked = 1 WHERE id = ?", (rental_id,))
     conn.commit()
 
     if cursor.rowcount > 0:
@@ -98,12 +98,12 @@ def update_car_rental(
 
     if start_date:
         cursor.execute(
-            "UPDATE car_rentals SET start_date = %s WHERE id = %s",
+            "UPDATE car_rentals SET start_date = ? WHERE id = ?",
             (start_date, rental_id),
         )
     if end_date:
         cursor.execute(
-            "UPDATE car_rentals SET end_date = %s WHERE id = %s", (end_date, rental_id)
+            "UPDATE car_rentals SET end_date = ? WHERE id = ?", (end_date, rental_id)
         )
 
     conn.commit()
@@ -130,7 +130,7 @@ def cancel_car_rental(rental_id: int) -> str:
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("UPDATE car_rentals SET booked = 0 WHERE id = %s", (rental_id,))
+    cursor.execute("UPDATE car_rentals SET booked = 0 WHERE id = ?", (rental_id,))
     conn.commit()
 
     if cursor.rowcount > 0:

@@ -2,10 +2,7 @@ langgraph
 langchain-community
 langchain_openai
 tavily-python
-pandas
 openai
 fastapi
 uvicorn
-sqlalchemy
-psycopg2-binary
 pytz

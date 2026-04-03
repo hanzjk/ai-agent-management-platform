@@ -17,13 +17,10 @@ Before deploying this agent, ensure you have:
 
 ### Database
 
-- **PostgreSQL Database**
-- **Database Dump**: Apply the `db_backup.sql` dump to your PostgreSQL database before deployment
-
-#### Setting up Database with Sample Data
-
-1. Create your PostgreSQL database
-2. Apply the database dump:
+The database is automatically set up when the agent starts:
+- Downloads sample travel data from Google Cloud Storage
+- Uses SQLite (no external database required)
+- Idempotent: skips seeding if already initialized
 
 ## Deployment Instructions
 
@@ -59,7 +56,6 @@ Add the following environment variables in the create form:
 ```env
 OPENAI_API_KEY=<your-openai-api-key>
 TAVILY_API_KEY=<your-tavily-api-key>
-DATABASE_URL=<your-postgresql-connection-string>
 ```
 
 ### Step 5: Deploy the Agent

@@ -29,14 +29,14 @@ def search_trip_recommendations(
     params = []
 
     if location:
-        query += " AND location LIKE %s"
+        query += " AND location LIKE ?"
         params.append(f"%{location}%")
     if name:
-        query += " AND name LIKE %s"
+        query += " AND name LIKE ?"
         params.append(f"%{name}%")
     if keywords:
         keyword_list = keywords.split(",")
-        keyword_conditions = " OR ".join(["keywords LIKE %s" for _ in keyword_list])
+        keyword_conditions = " OR ".join(["keywords LIKE ?" for _ in keyword_list])
         query += f" AND ({keyword_conditions})"
         params.extend([f"%{keyword.strip()}%" for keyword in keyword_list])
 
@@ -65,7 +65,7 @@ def book_excursion(recommendation_id: int) -> str:
     cursor = conn.cursor()
 
     cursor.execute(
-        "UPDATE trip_recommendations SET booked = 1 WHERE id = %s", (recommendation_id,)
+        "UPDATE trip_recommendations SET booked = 1 WHERE id = ?", (recommendation_id,)
     )
     conn.commit()
 
@@ -93,7 +93,7 @@ def update_excursion(recommendation_id: int, details: str) -> str:
     cursor = conn.cursor()
 
     cursor.execute(
-        "UPDATE trip_recommendations SET details = %s WHERE id = %s",
+        "UPDATE trip_recommendations SET details = ? WHERE id = ?",
         (details, recommendation_id),
     )
     conn.commit()
@@ -121,7 +121,7 @@ def cancel_excursion(recommendation_id: int) -> str:
     cursor = conn.cursor()
 
     cursor.execute(
-        "UPDATE trip_recommendations SET booked = 0 WHERE id = %s", (recommendation_id,)
+        "UPDATE trip_recommendations SET booked = 0 WHERE id = ?", (recommendation_id,)
     )
     conn.commit()
 

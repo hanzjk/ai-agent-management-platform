@@ -34,10 +34,10 @@ def search_hotels(
     params = []
 
     if location:
-        query += " AND location LIKE %s"
+        query += " AND location LIKE ?"
         params.append(f"%{location}%")
     if name:
-        query += " AND name LIKE %s"
+        query += " AND name LIKE ?"
         params.append(f"%{name}%")
     # For the sake of this tutorial, we will let you match on any dates and price tier.
     cursor.execute(query, params)
@@ -64,7 +64,7 @@ def book_hotel(hotel_id: int) -> str:
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("UPDATE hotels SET booked = 1 WHERE id = %s", (hotel_id,))
+    cursor.execute("UPDATE hotels SET booked = 1 WHERE id = ?", (hotel_id,))
     conn.commit()
 
     if cursor.rowcount > 0:
@@ -97,12 +97,12 @@ def update_hotel(
 
     if checkin_date:
         cursor.execute(
-            "UPDATE hotels SET checkin_date = %s WHERE id = %s",
+            "UPDATE hotels SET checkin_date = ? WHERE id = ?",
             (checkin_date, hotel_id),
         )
     if checkout_date:
         cursor.execute(
-            "UPDATE hotels SET checkout_date = %s WHERE id = %s",
+            "UPDATE hotels SET checkout_date = ? WHERE id = ?",
             (checkout_date, hotel_id),
         )
 
@@ -130,7 +130,7 @@ def cancel_hotel(hotel_id: int) -> str:
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("UPDATE hotels SET booked = 0 WHERE id = %s", (hotel_id,))
+    cursor.execute("UPDATE hotels SET booked = 0 WHERE id = ?", (hotel_id,))
     conn.commit()
 
     if cursor.rowcount > 0:
