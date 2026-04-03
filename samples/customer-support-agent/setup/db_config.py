@@ -31,7 +31,7 @@ def is_database_seeded() -> bool:
     """Check if the database has already been seeded."""
     if not DB_PATH.exists():
         return False
-
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -40,12 +40,13 @@ def is_database_seeded() -> bool:
             "SELECT name FROM sqlite_master WHERE type='table' AND name='flights'"
         )
         if not cursor.fetchone():
-            conn.close()
             return False
 
         cursor.execute("SELECT COUNT(*) FROM flights")
         count = cursor.fetchone()[0]
-        conn.close()
         return count > 0
     except Exception:
         return False
+    finally:
+        if conn:
+            conn.close()
