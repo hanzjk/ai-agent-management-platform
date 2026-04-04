@@ -180,7 +180,6 @@ const (
 	EndpointURLStatusTypeGRPC      EndpointURLStatusType = "gRPC"
 	EndpointURLStatusTypeGraphQL   EndpointURLStatusType = "GraphQL"
 	EndpointURLStatusTypeHTTP      EndpointURLStatusType = "HTTP"
-	EndpointURLStatusTypeREST      EndpointURLStatusType = "REST"
 	EndpointURLStatusTypeTCP       EndpointURLStatusType = "TCP"
 	EndpointURLStatusTypeUDP       EndpointURLStatusType = "UDP"
 	EndpointURLStatusTypeWebsocket EndpointURLStatusType = "Websocket"
@@ -346,7 +345,6 @@ const (
 	WorkloadEndpointTypeGRPC      WorkloadEndpointType = "gRPC"
 	WorkloadEndpointTypeGraphQL   WorkloadEndpointType = "GraphQL"
 	WorkloadEndpointTypeHTTP      WorkloadEndpointType = "HTTP"
-	WorkloadEndpointTypeREST      WorkloadEndpointType = "REST"
 	WorkloadEndpointTypeTCP       WorkloadEndpointType = "TCP"
 	WorkloadEndpointTypeUDP       WorkloadEndpointType = "UDP"
 	WorkloadEndpointTypeWebsocket WorkloadEndpointType = "Websocket"
@@ -1642,11 +1640,11 @@ type EndpointURLStatus struct {
 	// ServiceURL Structured URL with its components
 	ServiceURL *EndpointURL `json:"serviceURL,omitempty"`
 
-	// Type Endpoint type (HTTP, REST, gRPC, GraphQL, Websocket, TCP, UDP)
+	// Type Endpoint type (HTTP, gRPC, GraphQL, Websocket, TCP, UDP)
 	Type *EndpointURLStatusType `json:"type,omitempty"`
 }
 
-// EndpointURLStatusType Endpoint type (HTTP, REST, gRPC, GraphQL, Websocket, TCP, UDP)
+// EndpointURLStatusType Endpoint type (HTTP, gRPC, GraphQL, Websocket, TCP, UDP)
 type EndpointURLStatusType string
 
 // EntitlementConfig Configuration for extracting entitlement claims from tokens
@@ -2063,6 +2061,12 @@ type ObjectMeta struct {
 
 	// CreationTimestamp Creation timestamp
 	CreationTimestamp *time.Time `json:"creationTimestamp,omitempty"`
+
+	// DeletionGracePeriodSeconds Number of seconds before the object is removed after deletion is requested
+	DeletionGracePeriodSeconds *int64 `json:"deletionGracePeriodSeconds,omitempty"`
+
+	// DeletionTimestamp Timestamp when the resource was requested to be deleted
+	DeletionTimestamp *time.Time `json:"deletionTimestamp,omitempty"`
 
 	// Labels Map of string keys and values for organizing resources
 	Labels *map[string]string `json:"labels,omitempty"`

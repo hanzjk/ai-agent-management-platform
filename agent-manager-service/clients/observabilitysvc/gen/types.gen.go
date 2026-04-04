@@ -173,39 +173,39 @@ const (
 
 // AlertRuleRequest defines model for AlertRuleRequest.
 type AlertRuleRequest struct {
-	Condition *struct {
+	Condition struct {
 		// Enabled Whether the alert rule is enabled
-		Enabled *bool `json:"enabled,omitempty"`
+		Enabled bool `json:"enabled"`
 
 		// Interval The interval of time to query for the alert rule
-		Interval *string `json:"interval,omitempty"`
+		Interval string `json:"interval"`
 
 		// Operator The operator to use for the alert rule
-		Operator *AlertRuleRequestConditionOperator `json:"operator,omitempty"`
+		Operator AlertRuleRequestConditionOperator `json:"operator"`
 
 		// Threshold The threshold value to use for the alert rule
-		Threshold *float32 `json:"threshold,omitempty"`
+		Threshold float32 `json:"threshold"`
 
 		// Window The window of time to query for the alert rule
-		Window *string `json:"window,omitempty"`
-	} `json:"condition,omitempty"`
-	Metadata *struct {
+		Window string `json:"window"`
+	} `json:"condition"`
+	Metadata struct {
 		// ComponentUid The OpenChoreo component UID to query
-		ComponentUid *openapi_types.UUID `json:"componentUid,omitempty"`
+		ComponentUid openapi_types.UUID `json:"componentUid"`
 
 		// EnvironmentUid The OpenChoreo environment UID to query
-		EnvironmentUid *openapi_types.UUID `json:"environmentUid,omitempty"`
+		EnvironmentUid openapi_types.UUID `json:"environmentUid"`
 
 		// Name The name of the alert rule
-		Name *string `json:"name,omitempty"`
+		Name string `json:"name"`
 
 		// Namespace The namespace of the alert rule CR
-		Namespace *string `json:"namespace,omitempty"`
+		Namespace string `json:"namespace"`
 
 		// ProjectUid The OpenChoreo project UID to query
-		ProjectUid *openapi_types.UUID `json:"projectUid,omitempty"`
-	} `json:"metadata,omitempty"`
-	Source *struct {
+		ProjectUid openapi_types.UUID `json:"projectUid"`
+	} `json:"metadata"`
+	Source struct {
 		// Metric The metric to query for metric based alerts
 		Metric *AlertRuleRequestSourceMetric `json:"metric,omitempty"`
 
@@ -213,8 +213,8 @@ type AlertRuleRequest struct {
 		Query *string `json:"query,omitempty"`
 
 		// Type The type of the source
-		Type *AlertRuleRequestSourceType `json:"type,omitempty"`
-	} `json:"source,omitempty"`
+		Type AlertRuleRequestSourceType `json:"type"`
+	} `json:"source"`
 }
 
 // AlertRuleRequestConditionOperator The operator to use for the alert rule
@@ -720,7 +720,7 @@ type LogsQueryResponse struct {
 	// TookMs The time taken to query the logs in milliseconds
 	TookMs *int `json:"tookMs,omitempty"`
 
-	// Total The total number of logs queried
+	// Total The total number of matching log entries, capped at 1000
 	Total *int `json:"total,omitempty"`
 }
 
@@ -836,7 +836,7 @@ type TraceSpansQueryResponse struct {
 	// TookMs The time taken to query the spans in milliseconds
 	TookMs *int `json:"tookMs,omitempty"`
 
-	// Total The total number of spans
+	// Total The total number of matching spans, capped at 1000
 	Total *int `json:"total,omitempty"`
 }
 
@@ -864,7 +864,7 @@ type TracesQueryResponse struct {
 	// TookMs The time taken to query the traces in milliseconds
 	TookMs *int `json:"tookMs,omitempty"`
 
-	// Total The total number of traces
+	// Total The total number of matching traces, capped at 1000
 	Total *int `json:"total,omitempty"`
 
 	// Traces The list of traces

@@ -51,6 +51,9 @@ import (
 //			DeleteSecretReferenceFunc: func(ctx context.Context, namespaceName string, secretRefName string) error {
 //				panic("mock out the DeleteSecretReference method")
 //			},
+//			DeleteWorkflowFunc: func(ctx context.Context, namespaceName string, workflowName string) error {
+//				panic("mock out the DeleteWorkflow method")
+//			},
 //			DeployFunc: func(ctx context.Context, namespaceName string, projectName string, componentName string, req client.DeployRequest) error {
 //				panic("mock out the Deploy method")
 //			},
@@ -204,6 +207,9 @@ type OpenChoreoClientMock struct {
 
 	// DeleteSecretReferenceFunc mocks the DeleteSecretReference method.
 	DeleteSecretReferenceFunc func(ctx context.Context, namespaceName string, secretRefName string) error
+
+	// DeleteWorkflowFunc mocks the DeleteWorkflow method.
+	DeleteWorkflowFunc func(ctx context.Context, namespaceName string, workflowName string) error
 
 	// DeployFunc mocks the Deploy method.
 	DeployFunc func(ctx context.Context, namespaceName string, projectName string, componentName string, req client.DeployRequest) error
@@ -431,6 +437,15 @@ type OpenChoreoClientMock struct {
 			NamespaceName string
 			// SecretRefName is the secretRefName argument value.
 			SecretRefName string
+		}
+		// DeleteWorkflow holds details about calls to the DeleteWorkflow method.
+		DeleteWorkflow []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// NamespaceName is the namespaceName argument value.
+			NamespaceName string
+			// WorkflowName is the workflowName argument value.
+			WorkflowName string
 		}
 		// Deploy holds details about calls to the Deploy method.
 		Deploy []struct {
@@ -860,6 +875,7 @@ type OpenChoreoClientMock struct {
 	lockDeleteGitSecret                     sync.RWMutex
 	lockDeleteProject                       sync.RWMutex
 	lockDeleteSecretReference               sync.RWMutex
+	lockDeleteWorkflow                      sync.RWMutex
 	lockDeploy                              sync.RWMutex
 	lockDetachTrait                         sync.RWMutex
 	lockExpireWorkflowRun                   sync.RWMutex
@@ -1361,6 +1377,46 @@ func (mock *OpenChoreoClientMock) DeleteSecretReferenceCalls() []struct {
 	mock.lockDeleteSecretReference.RLock()
 	calls = mock.calls.DeleteSecretReference
 	mock.lockDeleteSecretReference.RUnlock()
+	return calls
+}
+
+// DeleteWorkflow calls DeleteWorkflowFunc.
+func (mock *OpenChoreoClientMock) DeleteWorkflow(ctx context.Context, namespaceName string, workflowName string) error {
+	if mock.DeleteWorkflowFunc == nil {
+		panic("OpenChoreoClientMock.DeleteWorkflowFunc: method is nil but OpenChoreoClient.DeleteWorkflow was just called")
+	}
+	callInfo := struct {
+		Ctx           context.Context
+		NamespaceName string
+		WorkflowName  string
+	}{
+		Ctx:           ctx,
+		NamespaceName: namespaceName,
+		WorkflowName:  workflowName,
+	}
+	mock.lockDeleteWorkflow.Lock()
+	mock.calls.DeleteWorkflow = append(mock.calls.DeleteWorkflow, callInfo)
+	mock.lockDeleteWorkflow.Unlock()
+	return mock.DeleteWorkflowFunc(ctx, namespaceName, workflowName)
+}
+
+// DeleteWorkflowCalls gets all the calls that were made to DeleteWorkflow.
+// Check the length with:
+//
+//	len(mockedOpenChoreoClient.DeleteWorkflowCalls())
+func (mock *OpenChoreoClientMock) DeleteWorkflowCalls() []struct {
+	Ctx           context.Context
+	NamespaceName string
+	WorkflowName  string
+} {
+	var calls []struct {
+		Ctx           context.Context
+		NamespaceName string
+		WorkflowName  string
+	}
+	mock.lockDeleteWorkflow.RLock()
+	calls = mock.calls.DeleteWorkflow
+	mock.lockDeleteWorkflow.RUnlock()
 	return calls
 }
 
