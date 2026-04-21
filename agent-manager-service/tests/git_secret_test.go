@@ -38,9 +38,7 @@ import (
 	"github.com/wso2/agent-manager/agent-manager-service/wiring"
 )
 
-var (
-	gitSecretTestOrgName = fmt.Sprintf("git-secret-test-org-%s", uuid.New().String()[:5])
-)
+var gitSecretTestOrgName = fmt.Sprintf("git-secret-test-org-%s", uuid.New().String()[:5])
 
 func TestCreateGitSecret(t *testing.T) {
 	authMiddleware := jwtassertion.NewMockMiddleware(t)

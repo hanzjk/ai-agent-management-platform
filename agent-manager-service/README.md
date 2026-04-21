@@ -2,36 +2,33 @@
 
 ## Overview
 
-The Agent Manager Service is a core component of the Agent Management Platform that handles agent deployment, management, and governing AI agents.
+The Agent Manager Service is a core component of the Agent Management Platform that handles agent deployment, management, and governing AI agents. It provides the backend API powering the control plane, including agent lifecycle management, JWT-based authentication, secret management, and integration with OpenChoreo for Kubernetes deployments.
 
 ## Folder Structure
 
 ```
 agent-manager-service/
 ├── api/                        # HTTP API layer with HTTP handlers and routing
-├── clients/                   # External service clients
+├── clients/                   # External service clients (OpenChoreo, Observer, API Platform, etc.)
 ├── config/                    # Configuration management
 ├── controllers/               # HTTP request controllers
 ├── db/                       # Database connection and utilities
 ├── db_migrations/            # Database schema migration files
 ├── db_types/                 # Custom database types
 ├── docs/                     # OpenAPI documentation
+├── keys/                     # JWT signing keys (generated via make gen-keys)
 ├── middleware/               # HTTP middleware (auth, logging, recovery)
-├── models/                   #  Data models and entities
+├── models/                   # Data models and entities
 ├── repositories/             # Data access layer
-├── scripts/                  # Development and Build scripts
-│   ├── fmt.sh               # Code formatting
-│   ├── gen_client.sh        # Client code generation
-│   ├── lint.sh              # Code linting
-│   ├── newline.sh           # Newline formatting
-│   └── run_tests.sh         # Test execution
+├── resources/                # Static resources (LLM provider templates, etc.)
+├── scripts/                  # Development and build scripts
 ├── services/                 # Business logic layer
-├── signals/                  # # Graceful shutdown handling
+├── signals/                  # Graceful shutdown handling
 ├── tests/                    # Test files
 ├── utils/                    # Utility functions
-├── wiring/                   # Dependency injection
+├── wiring/                   # Dependency injection (Wire)
 ├── .air.toml                 # Air hot-reload configuration
-├── .env                      # Environment variables (development)
+├── .env.example              # Example environment variables
 ├── Dockerfile                # Production container build
 ├── Dockerfile.dev            # Development container with hot-reload
 ├── go.mod                    # Go module definition
@@ -43,18 +40,20 @@ agent-manager-service/
 ## Prerequisites
 
 - **Go**: Version 1.25.0 or later
-- **PostgreSQL**: Version 12 or later
+- **PostgreSQL**: Version 12 or later (16 recommended)
 - **Make**: For build automation
-- **air** go install github.com/air-verse/air@latest
-- **moq**   go install github.com/matryer/moq@v0.5.3
+- **air**: Hot-reload for Go — `go install github.com/air-verse/air@latest`
+- **moq**: Mock generation — `go install github.com/matryer/moq@v0.5.3`
+- **wire**: Dependency injection — install via `go install github.com/google/wire/cmd/wire@latest`
+- **oapi-codegen**: OpenAPI client generation — `go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest`
 
 ## Local Development
 
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
-cd agent-management-platform/agent-manager-service
+git clone https://github.com/wso2/agent-manager.git
+cd ai-agent-manager/agent-manager-service
 ```
 
 ### 2. Install Dependencies
@@ -63,81 +62,130 @@ cd agent-management-platform/agent-manager-service
 go mod download
 ```
 
-### 3. Set Up Database
+### 3. Set Up Environment Variables
 
-### 4. Configurations
-<!-- Update this section when adding new configs-->
-The service uses environment variables for configuration. Create a `.env` file in the project root:
+Copy the example environment file and customize it:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your local settings. The key configuration sections are:
+
+#### Server Configuration
+
+| Key | Description | Default |
+|-----|-------------|---------|
+| `SERVER_HOST` | Host address where the server runs | _(empty = all interfaces)_ |
+| `SERVER_PORT` | Port number for the server | `9000` |
+| `CORS_ALLOWED_ORIGIN` | Allowed CORS origin for the console | `http://localhost:3000` |
+| `LOG_LEVEL` | Logging level (DEBUG, INFO, WARN, ERROR) | `INFO` |
+| `IS_LOCAL_DEV_ENV` | Enable local development mode | `true` |
+
+#### Database Configuration
+
+| Key | Description | Default |
+|-----|-------------|---------|
+| `DB_HOST` | Database host address | `localhost` |
+| `DB_PORT` | Database port number | `5432` |
+| `DB_USER` | Username for database authentication | `agentmanager` |
+| `DB_PASSWORD` | Password for database authentication | `agentmanager` |
+| `DB_NAME` | Name of the database | `agentmanager` |
+
+#### JWT Signing Configuration
+
+| Key | Description | Default |
+|-----|-------------|---------|
+| `JWT_SIGNING_PRIVATE_KEY_PATH` | Path to RSA private key for JWT signing | `keys/private.pem` |
+| `JWT_SIGNING_PUBLIC_KEYS_CONFIG` | Path to JSON config file containing public keys | `keys/public-keys-config.json` |
+| `JWT_SIGNING_ACTIVE_KEY_ID` | Key ID for active signing key | `key-1` |
+| `JWT_SIGNING_DEFAULT_EXPIRY` | Default token expiry duration | `8760h` (1 year) |
+| `JWT_SIGNING_ISSUER` | Issuer claim for JWT tokens | `agent-manager-service` |
+| `JWT_SIGNING_DEFAULT_ENVIRONMENT` | Default environment for token claims | `default` |
 
 
-| **Key**                            | **Description**                                           |
-|------------------------------------|-----------------------------------------------------------|
-| `SERVER_HOST`                      | Host address where the server runs                        |
-| `SERVER_PORT`                      | Port number for the server                                |
-| `DB_HOST`                          | Database host address                                     |
-| `DB_PORT`                          | Database port number                                      |
-| `DB_USER`                          | Username for database authentication                      |
-| `DB_PASSWORD`                      | Password for database authentication                      |
-| `DB_NAME`                          | Name of the database                                      |
-| `JWT_SIGNING_PRIVATE_KEY_PATH`     | Path to RSA private key for JWT signing                   |
-| `JWT_SIGNING_PUBLIC_KEYS_CONFIG`   | Path to JSON config file containing public keys           |
-| `JWT_SIGNING_ACTIVE_KEY_ID`        | Key ID for active signing key                             |
-| `JWT_SIGNING_DEFAULT_EXPIRY`       | Default token expiry duration (e.g., "8760h" for 1 year)  |
-| `JWT_SIGNING_ISSUER`               | Issuer claim for JWT tokens                               |
-| `JWT_SIGNING_DEFAULT_ENVIRONMENT`  | Default environment for token claims                      |
+#### Encryption Configuration
 
+| Key | Description | Default |
+|-----|-------------|---------|
+| `ENCRYPTION_KEY` | Hex-encoded 32-byte key for AES-256-GCM encryption of secrets at rest. Generate with `openssl rand -hex 32` | _(example key in .env.example)_ |
 
+#### OpenChoreo Configuration
+
+| Key | Description | Default |
+|-----|-------------|---------|
+| `OPEN_CHOREO_BASE_URL` | OpenChoreo API base URL | `http://api.openchoreo.localhost:8195` |
+
+#### Optional Configuration
+
+| Key | Description |
+|-----|-------------|
+| `OBSERVER_URL` | Observer service URL for observability data |
+| `IDP_TOKEN_URL` | Thunder IDP OAuth2 token endpoint |
+| `IDP_CLIENT_ID` | OAuth2 client ID for service-to-service auth |
+| `IDP_CLIENT_SECRET` | OAuth2 client secret |
+| `SECRET_MANAGER_PROVIDER` | Secret manager provider (`openbao`) |
+| `OPENBAO_URL` | OpenBao/Vault URL |
+| `OPENBAO_TOKEN` | OpenBao/Vault access token |
+| `DEFAULT_GATEWAY_PORT` | Default AI gateway port |
+| `LLM_TEMPLATE_DEFINITIONS_PATH` | Path to LLM provider template definitions |
+
+See `.env.example` for the full list of available configuration options.
+
+### 4. Set Up Database
+
+Start a PostgreSQL instance. The easiest way is with Docker:
+
+```bash
+docker run -d \
+  --name agent-manager-db \
+  -e POSTGRES_DB=agentmanager \
+  -e POSTGRES_USER=agentmanager \
+  -e POSTGRES_PASSWORD=agentmanager \
+  -p 5432:5432 \
+  postgres:16-alpine
+```
+
+Or if you have PostgreSQL installed locally, create the database:
+
+```bash
+createdb -U postgres agentmanager
+```
 
 ### 5. Generate JWT Signing Keys
 
 Generate RSA key pairs for JWT token signing:
 
 ```bash
-cd agent-management-platform/agent-manager-service
 make gen-keys
-# or directly:
-./scripts/gen_keys.sh
 ```
 
 **Generated Artifacts (default key-1):**
-- `keys/private.pem` - Private signing key
-- `keys/public.pem` - Public verification key
-- `keys/public-keys-config.json` - Public keys configuration with key ID "key-1"
+- `keys/private.pem` — Private signing key
+- `keys/public.pem` — Public verification key
+- `keys/public-keys-config.json` — Public keys configuration with key ID "key-1"
 
 **Key Rotation (generating additional keys):**
-To generate keys with a different key ID for rotation:
 ```bash
 ./scripts/gen_keys.sh key-2
 ```
 
-This produces:
-- `keys/private-key-2.pem` - Private signing key for key-2
-- `keys/public-key-2.pem` - Public verification key for key-2
-- Update the `keys/public-keys-config.json` to include key-2
-
-**Environment Variable Configuration:**
-After generating keys, configure these environment variables in your `.env` file:
-
+This produces `keys/private-key-2.pem` and `keys/public-key-2.pem`. Update `keys/public-keys-config.json` to include key-2, then set:
 ```bash
-# Path to the private key file for signing tokens
-JWT_SIGNING_PRIVATE_KEY_PATH=./keys/private.pem
-
-# Active key ID (must match the key ID in public-keys-config.json)
-JWT_SIGNING_ACTIVE_KEY_ID=key-1
-
-# Path to the public keys configuration file
-JWT_SIGNING_PUBLIC_KEYS_CONFIG=./keys/public-keys-config.json
+JWT_SIGNING_PRIVATE_KEY_PATH=./keys/private-key-2.pem
+JWT_SIGNING_ACTIVE_KEY_ID=key-2
 ```
-
-**For key rotation:** When switching to a new key (e.g., key-2), update:
-- `JWT_SIGNING_PRIVATE_KEY_PATH=./keys/private-key-2.pem`
-- `JWT_SIGNING_ACTIVE_KEY_ID=key-2`
 
 ### 6. Run Database Migrations
 
 ```bash
-cd agent-management-platform/agent-manager-service
 ENV_FILE_PATH=.env go run . -migrate
+```
+
+Or via Make:
+
+```bash
+make dev-migrate
 ```
 
 ### 7. Start Development Server
@@ -145,36 +193,47 @@ ENV_FILE_PATH=.env go run . -migrate
 Using Make:
 
 ```bash
-cd agent-management-platform/agent-manager-service
 make run
 ```
 
-or run Air directly:
+The service will start on `http://localhost:9000` by default with hot-reloading enabled.
+
+### 8. Verify the Service
+
 ```bash
-cd agent-management-platform/agent-manager-service
-air
+curl http://localhost:9000/health
 ```
 
-The service will start on `http://localhost:8910` by default with hot-reloading enabled.
+### 9. Run Tests
 
-### 8. Run tests
+Run tests against the local database:
+
 ```bash
-cd agent-management-platform/agent-manager-service
 make test
 ```
 
-### 9. Development Tools
+Run tests with an isolated test database:
 
-- **File Watcher**: `air` provides hot-reloading - watches for file changes and rebuilds/restarts automatically
-- **Code Formatting**: `make fmt` to format code
-- **Linting**: `make lint` to run linters
-- **Testing**: `make test` to run tests
-- **Generate wire dependencies**: `make wire`
-- **Code Generation**: `make codegen` to generate wire dependencies and models
-- **Model generation from the API specification** - `make spec`
+```bash
+make dev-test
+```
 
-## Scripts
-Run make help to see all available commands.
+## Development Tools
+
+| Command | Description |
+|---------|-------------|
+| `make run` | Start dev server with hot-reload |
+| `make test` | Run tests |
+| `make dev-test` | Run tests with isolated test database |
+| `make fmt` | Format code |
+| `make lint` | Run linters |
+| `make wire` | Generate Wire dependency injection code |
+| `make codegen` | Run go generate (Wire + models) |
+| `make spec` | Generate types/client from OpenAPI spec |
+| `make gen-keys` | Generate JWT signing keys |
+| `make dev-migrate` | Run database migrations |
+| `make gen-evaluators-dev` | Generate builtin evaluator catalog (dev mode) |
+| `make help` | Show all available commands |
 
 ## API Documentation
 
@@ -196,10 +255,6 @@ The service provides JWT-based authentication for external agents:
   - Used by clients to verify JWT signatures
   - No authentication required
 
-Tokens include claims for:
-- Component UID
-- Environment UID
-- Project UID
-- Standard JWT claims (iss, sub, exp, iat, nbf)
+## Running with Docker Compose
 
-
+For a fully integrated local setup (database + service + console), see the [Local Setup Guide](../deployments/LOCAL-SETUP.md).

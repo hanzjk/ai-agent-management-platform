@@ -2,110 +2,229 @@
 
 ## Overview
 
-Traces Observer Service is a lightweight backend that provides an HTTP API for querying traces collected in the observability plane. It communicates with OpenSearch to retrieve and aggregate tracing data produced by agents(components) across the platform, and exposes simple endpoints for the console. It is planned to migrate this service and functionality to the OpenChoreo Observability Plane Observer service later.
+Traces Observer Service is a lightweight Go backend that provides an HTTP API for querying traces collected in the observability plane. It communicates with OpenSearch to retrieve and aggregate tracing data produced by agents (components) across the platform, and exposes endpoints consumed by the console.
 
-## Features
-
-- Query traces and span documents stored in OpenSearch
-- Support time-range filtering and pagination
-- Provide a health endpoint for readiness/liveness checks
-- Serve as the backend for the console traces UI
-
-## How it works
+## How It Works
 
 1. The console sends a tracing query to the HTTP API exposed by this service.
 2. The service validates and translates the request into an OpenSearch query.
 3. The OpenSearch client executes the query against the configured cluster/indices.
 4. Results are formatted and returned to the caller (with paging and basic aggregation info where applicable).
 
-Architecture:
-
-HTTP API --> Request Handler --> Service/Query Layer --> OpenSearch Client --> OpenSearch Cluster
-
-## Configuration
-
-This service is configured via environment variables. The following are supported and commonly used:
-
-```env
-# Server Configuration
-TRACES_OBSERVER_PORT=9098
-
-# OpenSearch Configuration
-OPENSEARCH_ADDRESS=http://localhost:9200
-OPENSEARCH_USERNAME=admin
-OPENSEARCH_PASSWORD=admin
-OPENSEARCH_TRACE_INDEX=custom-otel-span-index
+```
+HTTP API → Request Handler → Service/Query Layer → OpenSearch Client → OpenSearch Cluster
 ```
 
-# Set the environment Variables
+## Folder Structure
 
-## Build and run — local (Go)
-
-Prerequisites: Go 1.20+ and a running OpenSearch instance reachable by the service.
-
-Build the binary:
-
-```bash
-go build -o traces-observer-service ./...
 ```
-Set the enviornment variables:
-```bash
-export OPENSEARCH_ADDRESS=https://localhost:9200 OPENSEARCH_USERNAME=admin OPENSEARCH_PASSWORD=ThisIsTheOpenSearchPassword1 TRACES_OBSERVER_PORT=9098
+traces-observer-service/
+├── config/         # Configuration management
+├── controllers/    # Request handlers
+├── docs/           # API documentation
+├── handlers/       # HTTP request handlers
+├── middleware/      # HTTP middleware (auth, logging)
+├── opensearch/     # OpenSearch integration and query builders
+├── scripts/        # Development and build scripts
+├── .air.toml       # Air hot-reload configuration
+├── .env.example    # Example environment variables
+├── Dockerfile      # Production container build
+├── Dockerfile.dev  # Development container with hot-reload
+├── go.mod          # Go module definition
+├── go.sum          # Go module checksums
+├── main.go         # Application entry point
+└── Makefile        # Build automation
 ```
 
-Run with environment variables set (example):
+## Prerequisites
+
+- **Go**: Version 1.20 or later
+- **Make**: For build automation
+- **air** (optional): Hot-reload for Go — `go install github.com/air-verse/air@latest`
+- **OpenSearch**: A running OpenSearch instance (provided by the platform's observability plane, or run locally)
+
+## Local Development
+
+### 1. Clone the Repository
 
 ```bash
-OPENSEARCH_ADDRESS=http://localhost:9200 OPENSEARCH_USERNAME=admin OPENSEARCH_PASSWORD=ThisIsTheOpenSearchPassword1  TRACES_OBSERVER_PORT=9098 \
+git clone https://github.com/wso2/agent-manager.git
+cd agent-manager/traces-observer-service
+```
+
+### 2. Install Dependencies
+
+```bash
+go mod download
+```
+
+### 3. Set Up Environment Variables
+
+Copy the example environment file and customize it:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your settings:
+
+| Key | Description | Default |
+|-----|-------------|---------|
+| `TRACES_OBSERVER_PORT` | HTTP server port | `9098` |
+| `OPENSEARCH_ADDRESS` | OpenSearch cluster URL | `https://localhost:9200` |
+| `OPENSEARCH_USERNAME` | OpenSearch username | `admin` |
+| `OPENSEARCH_PASSWORD` | OpenSearch password | `admin` |
+| `DEFAULT_SPAN_QUERY_LIMIT` | Default max spans per query | `1000` |
+| `LOG_LEVEL` | Logging level (DEBUG, INFO, WARN, ERROR) | `DEBUG` |
+| `IS_LOCAL_DEV_ENV` | Enable local development mode (skips strict auth) | `true` |
+
+**Optional — JWT validation (must match agent-manager-service values when auth is enabled):**
+
+| Key | Description |
+|-----|-------------|
+| `KEY_MANAGER_ISSUER` | JWT token issuer for validation |
+| `KEY_MANAGER_AUDIENCE` | JWT token audience for validation |
+| `KEY_MANAGER_JWKS_URL` | JWKS endpoint URL for JWT verification |
+
+### 4. Ensure OpenSearch Is Running
+
+The service requires a running OpenSearch instance. If you've set up the full platform with `make setup` from the project root, OpenSearch runs inside the k3d cluster. Forward it to localhost:
+
+```bash
+# From the project root
+make port-forward
+```
+
+This forwards OpenSearch to `localhost:9200` (among other services).
+
+Alternatively, run OpenSearch locally with Docker:
+
+```bash
+docker run -d \
+  --name opensearch \
+  -p 9200:9200 \
+  -e "discovery.type=single-node" \
+  -e "OPENSEARCH_INITIAL_ADMIN_PASSWORD=ThisIsTheOpenSearchPassword1" \
+  opensearchproject/opensearch:2.11.0
+```
+
+Then set in your `.env`:
+```
+OPENSEARCH_ADDRESS=https://localhost:9200
+OPENSEARCH_PASSWORD=ThisIsTheOpenSearchPassword1
+```
+
+### 5. Start Development Server
+
+Using Make with hot-reload (recommended):
+
+```bash
+make run
+```
+
+Or build and run manually:
+
+```bash
+go build -o traces-observer-service .
 ./traces-observer-service
 ```
 
 Or run directly:
 
 ```bash
-go run . # or `go run .` from the service root, depending on project layout
+go run .
 ```
+
+The service starts on `http://localhost:9098` by default.
+
+### 6. Verify the Service
+
+```bash
+curl http://localhost:9098/health
+```
+
+Expected response:
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-11-09T12:34:56Z"
+}
+```
+
+### 7. Run Tests
+
+```bash
+make test
+```
+
+Run tests with coverage:
+
+```bash
+make test-cover
+```
+
+## Development Tools
+
+| Command | Description |
+|---------|-------------|
+| `make run` | Start dev server with hot-reload (requires `air`) |
+| `make build` | Build the Go binary |
+| `make test` | Run unit tests |
+| `make test-cover` | Run tests with coverage report |
+| `make fmt` | Format code |
+| `make lint` | Run linters (requires `golangci-lint`) |
+| `make clean` | Clean build artifacts |
+| `make help` | Show all available commands |
 
 ## Docker
 
 Build the image:
 
 ```bash
-docker build -t traces-observer-service .
+make docker-build
 ```
 
-Run the container (example):
+Run the container:
 
 ```bash
-docker run --rm -p 9098:9098 \
-	-e OPENSEARCH_ADDRESS=http://host.docker.internal:9200 \
-	-e OPENSEARCH_USERNAME=admin \
-	-e OPENSEARCH_PASSWORD=ThisIsTheOpenSearchPassword1 \
-    -e TRACES_OBSERVER_PORT=9098 \
-	traces-observer-service
+make docker-run
 ```
 
-## API — Query Parameter Examples
+Or manually:
 
-All APIs use standard GET requests with query parameters
+```bash
+docker build -t traces-observer-service .
+docker run --rm -p 9098:9098 \
+  -e OPENSEARCH_ADDRESS=http://host.docker.internal:9200 \
+  -e OPENSEARCH_USERNAME=admin \
+  -e OPENSEARCH_PASSWORD=ThisIsTheOpenSearchPassword1 \
+  -e TRACES_OBSERVER_PORT=9098 \
+  traces-observer-service
+```
 
-### 1. List traces - `GET /api/v1/traces`
+## API Reference
+
+All endpoints use standard HTTP methods with query parameters.
+
+### 1. List Traces — `GET /api/v1/traces`
 
 Retrieves a list of trace overviews for a specific service with optional time filtering and pagination.
 
 **Query Parameters:**
 
-- `serviceName` (required) - Name of the service to query traces for
-- `startTime` (optional) - Start time in RFC3339 format (e.g., `2025-11-03T00:00:00Z`)
-- `endTime` (optional) - End time in RFC3339 format (e.g., `2025-11-08T23:59:59Z`)
-- `limit` (optional) - Maximum number of traces to return (default: 10)
-- `offset` (optional) - Number of traces to skip for pagination (default: 0)
-- `sortOrder` (optional) - Sort order: `asc` or `desc` (default: `desc` - newest first)
+| Parameter | Required | Description | Default |
+|-----------|----------|-------------|---------|
+| `serviceName` | Yes | Name of the service to query traces for | — |
+| `startTime` | No | Start time in RFC3339 format | — |
+| `endTime` | No | End time in RFC3339 format | — |
+| `limit` | No | Maximum number of traces to return | `10` |
+| `offset` | No | Number of traces to skip for pagination | `0` |
+| `sortOrder` | No | Sort order: `asc` or `desc` | `desc` |
 
-**Example request:**
+**Example:**
 
 ```bash
-curl --location 'http://localhost:9098/api/v1/traces?serviceName=sample-app&startTime=2025-11-03T00:00:00Z&endTime=2025-11-08T23:59:59Z&limit=10&offset=0'
+curl 'http://localhost:9098/api/v1/traces?serviceName=sample-app&startTime=2025-11-03T00:00:00Z&endTime=2025-11-08T23:59:59Z&limit=10&offset=0'
 ```
 
 **Response (200):**
@@ -126,21 +245,23 @@ curl --location 'http://localhost:9098/api/v1/traces?serviceName=sample-app&star
 }
 ```
 
-### 2. Get trace spans - `GET /api/v1/trace`
+### 2. Get Trace Spans — `GET /api/v1/trace`
 
 Retrieves all spans for a specific trace ID and service.
 
 **Query Parameters:**
 
-- `traceId` (required) - The trace ID to retrieve spans for
-- `serviceName` (required) - Name of the service
-- `sortOrder` (optional) - Sort order for spans: `asc` or `desc` (default: `asc` - chronological)
-- `limit` (optional) - Maximum number of spans to return (default: 100)
+| Parameter | Required | Description | Default |
+|-----------|----------|-------------|---------|
+| `traceId` | Yes | The trace ID to retrieve spans for | — |
+| `serviceName` | Yes | Name of the service | — |
+| `sortOrder` | No | Sort order: `asc` or `desc` | `asc` |
+| `limit` | No | Maximum number of spans to return | `100` |
 
-**Example request:**
+**Example:**
 
 ```bash
-curl --location 'http://localhost:9098/api/v1/trace?traceId=21a29d5d24837ca724b8751494e70a95&serviceName=langchain-docker-app&sortOrder=asc&limit=100'
+curl 'http://localhost:9098/api/v1/trace?traceId=21a29d5d24837ca724b8751494e70a95&serviceName=langchain-docker-app&sortOrder=asc&limit=100'
 ```
 
 **Response (200):**
@@ -163,85 +284,53 @@ curl --location 'http://localhost:9098/api/v1/trace?traceId=21a29d5d24837ca724b8
         "traceloop.entity.output": "{...}",
         "traceloop.workflow.name": "LangGraph"
       }
-    },
-    {
-      "traceId": "21a29d5d24837ca724b8751494e70a95",
-      "spanId": "c189ec26ae2a0bb5",
-      "parentSpanId": "e2c22d3d4b7736bd",
-      "name": "agent.task",
-      "service": "langchain-docker-app",
-      "startTime": "2025-11-03T11:42:18.331008193Z",
-      "endTime": "2025-11-03T11:42:20.55134794Z",
-      "duration": 2220339,
-      "kind": "SPAN_KIND_INTERNAL",
-      "status": "0",
-      "attributes": {
-        "traceloop.entity.name": "agent",
-        "traceloop.workflow.name": "LangGraph"
-      }
     }
   ],
   "totalCount": 2
 }
 ```
 
-### 3. Health check - `GET /health`
+### 3. Health Check — `GET /health`
 
 ```bash
 curl http://localhost:9098/health
 ```
 
-**Response (200):**
+### Error Responses
 
-```json
-{
-  "status": "healthy",
-  "timestamp": "2025-11-09T12:34:56Z"
-}
-```
+| Status | Description |
+|--------|-------------|
+| `200 OK` | Success |
+| `400 Bad Request` | Invalid parameters (missing required fields, invalid format) |
+| `500 Internal Server Error` | Server/OpenSearch errors |
 
-### Error responses
+## Mock Trace Generation
 
-All endpoints return appropriate HTTP status codes:
+Generate mock traces using OTLP HTTP for testing:
 
-- `200 OK` - Success
-- `400 Bad Request` - Invalid parameters (missing required fields, invalid format)
-- `500 Internal Server Error` - Server/OpenSearch errors
-
-# Mock Trace Generation (OTLP HTTP)
-
-Use `make mock-traces` from `traces-observer-service`.
-
-## Prerequisites
-
-Install:
+### Prerequisites
 
 ```bash
 go install github.com/open-telemetry/opentelemetry-collector-contrib/cmd/telemetrygen@latest
 ```
 
-Ensure Go bin is in `PATH` (for example `$(go env GOPATH)/bin`).
+Ensure `$(go env GOPATH)/bin` is in your `PATH`.
 
-## Make Targets
-
-From `traces-observer-service`:
+### Generate Mock Traces
 
 ```bash
 export AMP_AGENT_API_KEY="<your-api-key>"
 make mock-traces
 ```
 
-Set values directly in `traces-observer-service/Makefile` under:
-- `OTLP_ENDPOINT`
-- `OTLP_HTTP_PATH`
-- `TRACE_SERVICE_NAME`
-- `TRACE_COUNT`
-- `SPANS_PER_TRACE`
-- `TRACE_WORKERS`
-- `TRACE_RATE`
-- `TRACE_DURATION`
-- `OTLP_INSECURE`
+Override defaults on the command line:
 
-`AMP_AGENT_API_KEY` is intentionally not stored in `Makefile`; provide it from your environment.
+```bash
+make mock-traces SPANS_PER_TRACE=5 TRACE_COUNT=20
+```
 
-`SPANS_PER_TRACE` includes the root span (`child_spans = SPANS_PER_TRACE - 1`).
+See the `Makefile` for all configurable variables (`OTLP_ENDPOINT`, `TRACE_SERVICE_NAME`, etc.).
+
+## Running with the Full Platform
+
+For a fully integrated local setup, see the [Local Setup Guide](../deployments/LOCAL-SETUP.md).

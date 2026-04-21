@@ -4,26 +4,34 @@ React/TypeScript web application for the Agent Manager platform, built as a Rush
 
 ## Tech Stack
 
-- **React 19** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Build tool and dev server
-- **Rush** - Monorepo management
-- **pnpm** - Package manager
+- **React 19** — UI framework
+- **TypeScript** — Type safety
+- **Vite** — Build tool and dev server
+- **Rush** — Monorepo management
+- **pnpm** — Package manager (managed by Rush)
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
+- **Node.js**: Version 20.19.0+ or 22.12.0+ (see `.nvmrc` for the pinned version)
+- **Rush**: Monorepo management tool
+- **pnpm**: Installed automatically by Rush
 
-- **Node.js**: Version 18.20.3+ or 20.14.0+ (see supported versions in rush.json)
-- **Rush**: The monorepo management tool
-- **pnpm**: Package manager (installed automatically by Rush)
+### Install Node.js
 
-### Installing Rush
-
-Install Rush globally:
+Use [nvm](https://github.com/nvm-sh/nvm) to install the correct version:
 
 ```bash
-npm install -g @microsoft/rush
+cd console
+nvm install    # reads .nvmrc → installs 22.12.0
+nvm use
+```
+
+Or install Node.js 22.12.0+ manually from [nodejs.org](https://nodejs.org/).
+
+### Install Rush
+
+```bash
+npm install -g @microsoft/rush@5.157.0
 ```
 
 Verify installation:
@@ -35,21 +43,21 @@ rush --version
 
 ### 1. Install Dependencies
 
-From the `console/` directory, install all dependencies for the monorepo:
+From the `console/` directory:
 
 ```bash
 cd console
 make install
 ```
 
-This command will:
-- Install Rush's local copy of pnpm
-- Install all dependencies for all projects in the monorepo
-- Create symlinks between local packages
+This runs `rush install`, which:
+- Installs Rush's local copy of pnpm
+- Installs all dependencies for all projects in the monorepo
+- Creates symlinks between local packages
 
 ### 2. Build Libraries
 
-Build all shared libraries first:
+Build the webapp and all its dependencies:
 
 ```bash
 make build-webapp
@@ -60,86 +68,76 @@ Or build all projects:
 make build
 ```
 
-### 3. Start Development Server
+### 3. Configure the Application
+
+The console uses a runtime configuration file to connect to backend services. Copy the template:
+
+```bash
+cp apps/webapp/public/config.template.js apps/webapp/public/config.js
+```
+
+Edit `apps/webapp/public/config.js` for local development:
+
+```javascript
+window.__RUNTIME_CONFIG__ = {
+  authConfig: {
+    // ... leave auth defaults for local dev
+  },
+  disableAuth: 'true' === 'true',        // Set to true for local dev without IDP
+  apiBaseUrl: 'http://localhost:9000',     // Agent Manager Service API
+  obsApiBaseUrl: 'http://localhost:9098',  // Traces Observer Service API
+  gatewayControlPlaneUrl: 'http://localhost:9243',
+  gatewayVersion: 'v0.9.0',
+  instrumentationUrl: '',
+  guardrailsCatalogUrl: '',
+  guardrailsDefinitionBaseUrl: '',
+};
+```
+
+**Key configuration values for local development:**
+
+| Variable | Description | Local Value |
+|----------|-------------|-------------|
+| `disableAuth` | Bypass authentication (set `'true'` string comparison) | `true` |
+| `apiBaseUrl` | Agent Manager Service URL | `http://localhost:9000` |
+| `obsApiBaseUrl` | Traces Observer Service URL | `http://localhost:9098` |
+| `gatewayControlPlaneUrl` | Gateway control plane WebSocket URL | `http://localhost:9243` |
+
+### 4. Start Development Server
 
 ```bash
 make dev
 ```
 
-This will:
-- Start all library dependencies in watch mode
-- Launch the Vite dev server at `http://localhost:3000`
-- Automatically rebuild dependencies when you make changes
-- Hot-reload the webapp when dependencies update
+This starts the Vite dev server at `http://localhost:3000` with hot module replacement (HMR).
 
-Press `Ctrl+C` to stop all processes.
-
-### 4. Environment Configuration
-
-Copy the configuration template and customize it:
-
-```bash
-cp apps/webapp/public/config.js.template apps/webapp/public/config.js
-```
-
-Edit `apps/webapp/public/config.js` to set your API URL:
-
-```javascript
-window.APP_CONFIG = {
-  API_URL: 'http://localhost:8080'
-};
-```
+Press `Ctrl+C` to stop.
 
 ## Available Commands
 
 ### Make Commands (Recommended)
 
 ```bash
-# Start development mode with hot-reload
-make dev
-
-# Install dependencies
-make install
-
-# Build all projects
-make build
-
-# Clean build outputs
-make clean
-
-# Purge Rush cache
-make purge
-
-# Show all available commands
-make help
+make dev         # Start development mode with hot-reload
+make install     # Install dependencies
+make build       # Build all projects
+make build-webapp # Build webapp and its dependencies
+make clean       # Clean build outputs
+make purge       # Purge Rush cache
+make help        # Show all available commands
 ```
 
 ### Rush Commands
 
 ```bash
-# Install dependencies
-rush install
-
-# Build all projects
-rush build
-
-# Build specific project and its dependencies
-rush build --to @agent-management-platform/webapp
-
-# Run linting for all projects
-rush lint
-
-# Run tests for all projects
-rush test
-
-# Clean all build outputs
-rush purge
-
-# Update dependencies
-rush update
-
-# Create a new page component
-rush create-page
+rush install                                    # Install dependencies
+rush build                                      # Build all projects
+rush build --to @agent-management-platform/webapp  # Build webapp + dependencies
+rush lint                                       # Lint all projects
+rush test                                       # Test all projects
+rush purge                                      # Clean all build outputs
+rush update                                     # Update dependencies
+rush create-page                                # Create a new page component
 ```
 
 ### Project-Specific Commands
@@ -148,62 +146,31 @@ Navigate to any project directory and use `rushx`:
 
 ```bash
 cd apps/webapp
-
-# Start development server
-rushx dev
-
-# Build for production
-rushx build
-
-# Run linting
-rushx lint
-
-# Fix linting issues
-rushx lint:fix
-
-# Preview production build
-rushx preview
+rushx dev        # Start development server
+rushx build      # Build for production
+rushx lint       # Run linting
+rushx lint:fix   # Fix linting issues
+rushx preview    # Preview production build
 ```
 
 ## Creating New Page Components
 
-Create new page components with the same structure and dependencies as existing pages using the integrated Yeoman generator.
+Create new page components using the integrated Yeoman generator:
 
-### Using the Page Generator
-
-From the `console/` directory, run the Rush command:
 ```bash
 cd console
 rush create-page
 ```
 
-**Answer the prompts**:
-   - **Package name** (e.g., `user-dashboard`) - use kebab-case
-   - **Display title** (e.g., `User Dashboard`) - will auto-generate from package name
-   - **Description** (e.g., `A dashboard page for managing users`)
-   - **Route path** (e.g., `/user-dashboard`)
+Answer the prompts:
+- **Package name** (e.g., `user-dashboard`) — use kebab-case
+- **Display title** (e.g., `User Dashboard`)
+- **Description** (e.g., `A dashboard page for managing users`)
+- **Route path** (e.g., `/user-dashboard`)
 
-**Example interaction**:
-```bash
-$ rush create-page
+After generating a new page:
 
-? What is the name of your page package? (my-page) user-dashboard
-? What is the display title for your page? (User Dashboard) User Dashboard
-? What is the description for your page? (A page component for User Dashboard) A dashboard page for managing users
-? What is the route path for your page? (/user/dashboard) /user-dashboard
-
-Template generated successfully!
-Next steps:
-1. Add the new page to rush.json projects list
-2. Run rush update to install dependencies
-3. Run rushx build to build the package
-4. Run rushx storybook to view the component in Storybook
-```
-
-**After generating a new page, update Rush configuration**:
-
-1. **Add the new page to Rush projects list**:
-   Edit `rush.json` and add your new page to the `projects` array:
+1. Add the new page to `rush.json` projects list:
    ```json
    {
      "packageName": "@agent-management-platform/your-page-name",
@@ -211,38 +178,45 @@ Next steps:
    }
    ```
 
-2. **Update Rush to recognize the new package**:
+2. Update Rush:
    ```bash
-   # Go back to console root
-   cd ../../..
-   
-   # Update Rush to recognize the new package
    rush update
    ```
 
-3. **Build your new page**:
+3. Build your new page:
    ```bash
    cd workspaces/pages/your-page-name
    rushx build
-   rushx storybook  # Optional: to view in Storybook
    ```
 
-## Project Structure Details
+## Project Structure
 
 ### Apps
-- **webapp**: Main React application with Vite build system
+- **webapp** — Main React application with Vite build system
 
-### Libraries
-- **auth**: Authentication provider and hooks
-- **types**: Shared TypeScript type definitions
-- **eslint-config**: Shared ESLint configuration
-- **views**: Shared UI components and themes
-- **api-client**: API client utilities
+### Libraries (`workspaces/libs/`)
+- **auth** — Authentication provider and hooks
+- **types** — Shared TypeScript type definitions
+- **eslint-config** — Shared ESLint configuration
+- **views** — Shared UI components and themes
+- **api-client** — API client utilities
 
-### Pages
-- **AgentsListPage**: Example page component (use as reference)
-- **.template**: Yeoman generator template for creating new pages (integrated with Rush)
+### Pages (`workspaces/pages/`)
+Feature page components, each as a separate Rush project. Use `rush create-page` to scaffold new pages.
 
-### Rush Commands
-- **create-page**: Rush command to create new page components using the Yeoman generator
+## Troubleshooting
 
+### `rush install` fails
+- Ensure you're using the correct Node.js version: `nvm use`
+- Try purging and reinstalling: `rush purge && rush install`
+
+### Config changes not reflected
+- The `config.js` file is loaded at runtime, not build time. Hard-refresh your browser (`Cmd+Shift+R` / `Ctrl+Shift+R`).
+
+### Hot reload not working
+- Ensure Vite dev server is running (`make dev`)
+- Check that library dependencies are built (`make build-webapp`)
+
+## Running with Docker Compose
+
+For a fully integrated local setup (database + service + console), see the [Local Setup Guide](../deployments/LOCAL-SETUP.md).
