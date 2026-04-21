@@ -38,7 +38,7 @@ traces-observer-service/
 
 ## Prerequisites
 
-- **Go**: Version 1.20 or later
+- **Go**: Version 1.25.0
 - **Make**: For build automation
 - **air** (optional): Hot-reload for Go — `go install github.com/air-verse/air@latest`
 - **OpenSearch**: A running OpenSearch instance (provided by the platform's observability plane, or run locally)

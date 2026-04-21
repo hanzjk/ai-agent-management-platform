@@ -29,7 +29,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
-	"github.com/wso2/agent-manager/agent-manager-service/clients/openchoreosvc/client"
 	"github.com/wso2/agent-manager/agent-manager-service/middleware/jwtassertion"
 	"github.com/wso2/agent-manager/agent-manager-service/spec"
 	"github.com/wso2/agent-manager/agent-manager-service/tests/apitestutils"
@@ -162,10 +161,10 @@ func TestDeployAgentWithSecrets(t *testing.T) {
 	t.Run("Deploying agent that does not exist should return 404", func(t *testing.T) {
 		openChoreoClient := apitestutils.CreateMockOpenChoreoClient()
 		openChoreoClient.ComponentExistsFunc = func(ctx context.Context, orgName string, projName string, agentName string, verifyProject bool) (bool, error) {
+			if agentName == "nonexistent-agent-xyz" {
+				return false, nil
+			}
 			return true, nil
-		}
-		openChoreoClient.DeployFunc = func(ctx context.Context, namespaceName string, projectName string, componentName string, req client.DeployRequest) error {
-			return fmt.Errorf("agent not found")
 		}
 
 		testClients := wiring.TestClients{
@@ -194,8 +193,7 @@ func TestDeployAgentWithSecrets(t *testing.T) {
 		rr := httptest.NewRecorder()
 		app.ServeHTTP(rr, req)
 
-		// Agent not found should return 404 (the mock ComponentExists returns false for "nonexistent-agent")
-		require.True(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusInternalServerError,
-			"Expected 404 or 500, got %d", rr.Code)
+		// Agent not found should return 404
+		require.Equal(t, http.StatusNotFound, rr.Code)
 	})
 }

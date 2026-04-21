@@ -53,7 +53,7 @@ agent-manager-service/
 
 ```bash
 git clone https://github.com/wso2/agent-manager.git
-cd ai-agent-manager/agent-manager-service
+cd agent-manager/agent-manager-service
 ```
 
 ### 2. Install Dependencies
@@ -177,12 +177,6 @@ JWT_SIGNING_ACTIVE_KEY_ID=key-2
 ```
 
 ### 6. Run Database Migrations
-
-```bash
-ENV_FILE_PATH=.env go run . -migrate
-```
-
-Or via Make:
 
 ```bash
 make dev-migrate
