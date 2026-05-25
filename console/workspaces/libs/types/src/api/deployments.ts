@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import { type AgentPathParams, type EnvironmentVariable, type FileMount, type EndpointSchema, type OrgProjPathParams, type PaginationMeta, type ListQuery } from './common';
+import { type AgentPathParams, type CorsConfig, type EnvironmentVariable, type FileMount, type EndpointSchema, type OrgProjPathParams, type PaginationMeta, type ListQuery } from './common';
 
 // Requests
 export interface DeployAgentRequest {
@@ -26,6 +26,7 @@ export interface DeployAgentRequest {
   enableAutoInstrumentation?: boolean;
   instrumentationVersion?: string;
   enableApiKeySecurity?: boolean;
+  corsConfig?: CorsConfig;
 }
 
 // Responses
