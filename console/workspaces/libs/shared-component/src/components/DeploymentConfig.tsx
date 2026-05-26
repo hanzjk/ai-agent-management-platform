@@ -34,7 +34,9 @@ import {
   Chip,
   Collapse,
   Form,
+  FormControl,
   FormControlLabel,
+  FormLabel,
   Skeleton,
   Switch,
   TextField,
@@ -505,12 +507,38 @@ export function DeploymentConfig({
                       <AccordionDetails>
                         <Form.Stack spacing={2}>
                           {!corsAllowAll && (
+                            <FormControl fullWidth>
+                              <FormLabel>Allowed origins</FormLabel>
+                              <Autocomplete
+                                multiple
+                                freeSolo
+                                options={[]}
+                                value={corsOrigins}
+                                onChange={(_, newValue) => setCorsOrigins(newValue as string[])}
+                                renderTags={(tagValues, getTagProps) =>
+                                  tagValues.map((option, index) => (
+                                    <Chip
+                                      label={option as string}
+                                      size="small"
+                                      {...getTagProps({ index })}
+                                      key={option as string}
+                                    />
+                                  ))
+                                }
+                                renderInput={(params) => (
+                                  <TextField {...params} size="small" placeholder="Add origin and press Enter" />
+                                )}
+                              />
+                            </FormControl>
+                          )}
+                          <FormControl fullWidth>
+                            <FormLabel>Allowed methods</FormLabel>
                             <Autocomplete
                               multiple
                               freeSolo
                               options={[]}
-                              value={corsOrigins}
-                              onChange={(_, newValue) => setCorsOrigins(newValue as string[])}
+                              value={corsMethods}
+                              onChange={(_, newValue) => setCorsMethods(newValue as string[])}
                               renderTags={(tagValues, getTagProps) =>
                                 tagValues.map((option, index) => (
                                   <Chip
@@ -522,50 +550,33 @@ export function DeploymentConfig({
                                 ))
                               }
                               renderInput={(params) => (
-                                <TextField {...params} label="Allowed origins" size="small" placeholder="Add origin and press Enter" />
+                                <TextField {...params} size="small" placeholder="Add method and press Enter" />
                               )}
                             />
-                          )}
-                          <Autocomplete
-                            multiple
-                            freeSolo
-                            options={[]}
-                            value={corsMethods}
-                            onChange={(_, newValue) => setCorsMethods(newValue as string[])}
-                            renderTags={(tagValues, getTagProps) =>
-                              tagValues.map((option, index) => (
-                                <Chip
-                                  label={option as string}
-                                  size="small"
-                                  {...getTagProps({ index })}
-                                  key={option as string}
-                                />
-                              ))
-                            }
-                            renderInput={(params) => (
-                              <TextField {...params} label="Allowed methods" size="small" placeholder="Add method and press Enter" />
-                            )}
-                          />
-                          <Autocomplete
-                            multiple
-                            freeSolo
-                            options={[]}
-                            value={corsHeaders}
-                            onChange={(_, newValue) => setCorsHeaders(newValue as string[])}
-                            renderTags={(tagValues, getTagProps) =>
-                              tagValues.map((option, index) => (
-                                <Chip
-                                  label={option as string}
-                                  size="small"
-                                  {...getTagProps({ index })}
-                                  key={option as string}
-                                />
-                              ))
-                            }
-                            renderInput={(params) => (
-                              <TextField {...params} label="Allowed headers" size="small" placeholder="Add header and press Enter" />
-                            )}
-                          />
+                          </FormControl>
+                          <FormControl fullWidth>
+                            <FormLabel>Allowed headers</FormLabel>
+                            <Autocomplete
+                              multiple
+                              freeSolo
+                              options={[]}
+                              value={corsHeaders}
+                              onChange={(_, newValue) => setCorsHeaders(newValue as string[])}
+                              renderTags={(tagValues, getTagProps) =>
+                                tagValues.map((option, index) => (
+                                  <Chip
+                                    label={option as string}
+                                    size="small"
+                                    {...getTagProps({ index })}
+                                    key={option as string}
+                                  />
+                                ))
+                              }
+                              renderInput={(params) => (
+                                <TextField {...params} size="small" placeholder="Add header and press Enter" />
+                              )}
+                            />
+                          </FormControl>
                         </Form.Stack>
                       </AccordionDetails>
                     </Accordion>
@@ -595,13 +606,12 @@ export function DeploymentConfig({
                   Secure your agent endpoint with API key authentication.
                 </Typography>
                 <Collapse in={enableApiKeySecurity}>
-                  <TextField
+                  <TextInput
                     label="Header"
                     value="X-API-Key"
                     size="small"
                     fullWidth
                     disabled
-                    slotProps={{ inputLabel: { shrink: true } }}
                     sx={{ mt: 1 }}
                   />
                 </Collapse>
