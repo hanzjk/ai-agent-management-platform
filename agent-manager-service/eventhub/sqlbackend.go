@@ -556,16 +556,20 @@ func (b *SQLBackend) pollGatewayWithState(gw *gateway, state GatewayState) error
 		return fmt.Errorf("error iterating event rows: %w", err)
 	}
 
-	// On cold start, filter to current desired state: skip API key events
-	// (gateway bulk-syncs those on reconnect) and keep only the latest event
-	// per entity_id for all other types.
-	if !resuming {
-		events = deduplicateLatestPerEntity(events)
-	}
-
 	// Hold the read lock across all channel sends so that Unsubscribe/UnsubscribeAll
 	// (which need the write lock) cannot close a channel while a send is in flight.
 	b.registry.mu.RLock()
+
+	// On cold start with no active subscribers, filter to current desired state:
+	// skip API key events (gateway bulk-syncs those on reconnect) and keep only
+	// the latest event per entity_id for all other types. When subscribers ARE
+	// present we deliver all events verbatim — deduplication must not drop live
+	// apikey events that arrived while the gateway was connected.
+	if !resuming && len(gw.subscribers) == 0 {
+		b.registry.mu.RUnlock()
+		events = deduplicateLatestPerEntity(events)
+		b.registry.mu.RLock()
+	}
 
 	if len(gw.subscribers) == 0 {
 		shouldLog := len(events) > 0 && gw.queuedLoggedAt == 0
