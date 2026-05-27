@@ -36,5 +36,6 @@ func registerInfraRoutes(mux *http.ServeMux, ctrl controllers.InfraResourceContr
 	middleware.HandleFuncWithValidation(mux, "GET /orgs/{orgName}/projects/{projName}", ctrl.GetProject)
 	middleware.HandleFuncWithValidation(mux, "PUT /orgs/{orgName}/projects/{projName}", ctrl.UpdateProject)
 	middleware.HandleFuncWithValidation(mux, "GET /orgs/{orgName}/projects/{projName}/deployment-pipeline", ctrl.GetProjectDeploymentPipeline)
+	middleware.HandleFuncWithValidation(mux, "PUT /orgs/{orgName}/projects/{projName}/deployment-pipeline", ctrl.UpdateProjectDeploymentPipeline)
 	middleware.HandleFuncWithValidation(mux, "DELETE /orgs/{orgName}/projects/{projName}", ctrl.DeleteProject)
 }
