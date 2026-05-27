@@ -556,20 +556,29 @@ func (b *SQLBackend) pollGatewayWithState(gw *gateway, state GatewayState) error
 		return fmt.Errorf("error iterating event rows: %w", err)
 	}
 
-	// Hold the read lock across all channel sends so that Unsubscribe/UnsubscribeAll
-	// (which need the write lock) cannot close a channel while a send is in flight.
+	// Snapshot subscriber count under the read lock so the deduplication decision
+	// and the no-subscriber early-return below are both based on consistent state.
+	// Dropping and re-acquiring the lock between the check and deduplicateLatestPerEntity
+	// would allow a concurrent Subscribe (write lock) to race in and add a subscriber,
+	// causing a newly-connected gateway to receive deduplicated catch-up events instead
+	// of the full live stream.
 	b.registry.mu.RLock()
+	subscriberCountAtCheck := len(gw.subscribers)
+	b.registry.mu.RUnlock()
 
-	// On cold start with no active subscribers, filter to current desired state:
-	// skip API key events (gateway bulk-syncs those on reconnect) and keep only
-	// the latest event per entity_id for all other types. When subscribers ARE
-	// present we deliver all events verbatim — deduplication must not drop live
+	// On cold start with no active subscribers at the time of the check, filter to
+	// current desired state: skip API key events (gateway bulk-syncs those on reconnect)
+	// and keep only the latest event per entity_id for all other types. When subscribers
+	// ARE present we deliver all events verbatim — deduplication must not drop live
 	// apikey events that arrived while the gateway was connected.
-	if !resuming && len(gw.subscribers) == 0 {
-		b.registry.mu.RUnlock()
+	if !resuming && subscriberCountAtCheck == 0 {
 		events = deduplicateLatestPerEntity(events)
-		b.registry.mu.RLock()
 	}
+
+	// Re-acquire the read lock and hold it across all channel sends so that
+	// Unsubscribe/UnsubscribeAll (which need the write lock) cannot close a
+	// channel while a send is in flight.
+	b.registry.mu.RLock()
 
 	if len(gw.subscribers) == 0 {
 		shouldLog := len(events) > 0 && gw.queuedLoggedAt == 0
