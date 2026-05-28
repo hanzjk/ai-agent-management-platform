@@ -20,12 +20,14 @@ import {
   useGetAgent,
   useGetAgentMetrics,
   useGetAgentResourceConfigs,
+  useGetDeploymentPipeline,
   useListAgentDeployments,
   useListAgentKindVersions,
   useUpdateDeploymentState,
 } from "@agent-management-platform/api-client";
 import { NoDataFound, TextInput } from "@agent-management-platform/views";
 import {
+  ArrowUpFromLine,
   Clock,
   Cpu,
   ExternalLink,
@@ -73,6 +75,7 @@ import { extractBuildIdFromImageId } from "../utils/extractBuildIdFromImageId";
 import { formatDistanceToNow } from "date-fns";
 import { useCallback, useMemo } from "react";
 import { EditResourceConfigsDrawer } from "./EditResourceConfigsDrawer";
+import { PromoteAgentDrawer } from "./PromoteAgentDrawer";
 
 function DeploymentStatusPanel({ status }: { status: DeploymentStatus }) {
   const theme = useTheme();
@@ -224,6 +227,7 @@ interface DeployCardProps {
 
 const ENV_ID_PARAM = "envId";
 const OPEN_RES_CONFIG_PARAM = "openResConfig";
+const OPEN_PROMOTE_PARAM = "openPromote";
 
 export function DeployCard(props: DeployCardProps) {
   const { currentEnvironment } = props;
@@ -232,6 +236,10 @@ export function DeployCard(props: DeployCardProps) {
 
   const resourceConfigDrawerOpen =
     searchParams.get(OPEN_RES_CONFIG_PARAM) === "open" &&
+    searchParams.get(ENV_ID_PARAM) === currentEnvironment.name;
+
+  const promoteDrawerOpen =
+    searchParams.get(OPEN_PROMOTE_PARAM) === "open" &&
     searchParams.get(ENV_ID_PARAM) === currentEnvironment.name;
 
   const handleOpenResourceConfigDrawer = useCallback(() => {
@@ -248,12 +256,38 @@ export function DeployCard(props: DeployCardProps) {
     setSearchParams(next);
   }, [searchParams, setSearchParams]);
 
+  const handleOpenPromoteDrawer = useCallback(() => {
+    const next = new URLSearchParams(searchParams);
+    next.set(ENV_ID_PARAM, currentEnvironment.name);
+    next.set(OPEN_PROMOTE_PARAM, "open");
+    setSearchParams(next);
+  }, [currentEnvironment.name, searchParams, setSearchParams]);
+
+  const handleClosePromoteDrawer = useCallback(() => {
+    const next = new URLSearchParams(searchParams);
+    next.delete(OPEN_PROMOTE_PARAM);
+    next.delete(ENV_ID_PARAM);
+    setSearchParams(next);
+  }, [searchParams, setSearchParams]);
+
   const { data: deployments, isLoading: isDeploymentsLoading } =
     useListAgentDeployments({
       orgName: orgId,
       projName: projectId,
       agentName: agentId,
     });
+
+  const { data: pipeline } = useGetDeploymentPipeline({
+    orgName: orgId,
+    projName: projectId,
+  });
+
+  const hasPromotionTarget = useMemo(() => {
+    if (!pipeline) return false;
+    return pipeline.promotionPaths.some(
+      (p) => p.sourceEnvironmentRef === currentEnvironment.name,
+    );
+  }, [pipeline, currentEnvironment.name]);
   const { mutate: updateDeploymentState, isPending: isUpdating } =
     useUpdateDeploymentState();
 
@@ -410,6 +444,16 @@ export function DeployCard(props: DeployCardProps) {
               </Typography>
             </Stack>
             <Stack direction="row" height={15} gap={1} alignItems="center">
+              {hasPromotionTarget && isEnvironmentActive && (
+                <Button
+                  startIcon={<ArrowUpFromLine size={16} />}
+                  variant="outlined"
+                  size="small"
+                  onClick={handleOpenPromoteDrawer}
+                >
+                  Promote
+                </Button>
+              )}
               {currentDeployment?.status !== DeploymentStatus.SUSPENDED && (
                 <Button
                   startIcon={<PauseCircle size={16} />}
@@ -557,6 +601,16 @@ export function DeployCard(props: DeployCardProps) {
               projName={projectId ?? "default"}
               agentName={agentId}
               environment={currentEnvironment.name}
+            />
+          )}
+          {agentId && orgId && projectId && (
+            <PromoteAgentDrawer
+              open={promoteDrawerOpen}
+              onClose={handleClosePromoteDrawer}
+              sourceEnvironment={currentEnvironment}
+              orgId={orgId}
+              projectId={projectId}
+              agentId={agentId}
             />
           )}
           <Divider />
