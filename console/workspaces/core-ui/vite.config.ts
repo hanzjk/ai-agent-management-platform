@@ -62,6 +62,9 @@ export default defineConfig({
       '@agent-management-platform/eval': path.resolve(__dirname, '../pages/eval/src'),
       '@agent-management-platform/llm-providers': path.resolve(__dirname, '../pages/llm-providers/src'),
       '@agent-management-platform/gateways': path.resolve(__dirname, '../pages/gateways/src'),
+      '@agent-management-platform/agent-security': path.resolve(__dirname, '../pages/agent-security/src'),
+      '@agent-management-platform/agent-kind': path.resolve(__dirname, '../pages/agent-kind/src'),
+      '@agent-management-platform/deployment-pipelines': path.resolve(__dirname, '../pages/deployment-pipelines/src'),
     },
   },
   build: {
