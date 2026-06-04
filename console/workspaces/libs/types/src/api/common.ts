@@ -86,12 +86,21 @@ export interface DockerBuild {
 
 export type Build = BuildpackBuild | DockerBuild;
 
+export interface CorsConfig {
+  enabled?: boolean;
+  allowOrigin?: string[];
+  allowMethods?: string[];
+  allowHeaders?: string[];
+  allowCredentials?: boolean;
+}
+
 export interface Configurations {
   env?: EnvironmentVariable[];
   files?: FileMount[];
   enableAutoInstrumentation?: boolean;
   instrumentationVersion?: string;
   enableApiKeySecurity?: boolean;
+  corsConfig?: CorsConfig;
 }
 
 export interface EndpointSchema {

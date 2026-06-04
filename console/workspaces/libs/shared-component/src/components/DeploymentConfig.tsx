@@ -22,13 +22,21 @@ import {
   useGetAgentConfigurations,
   useListEnvironments,
 } from "@agent-management-platform/api-client";
-import { Rocket } from "@wso2/oxygen-ui-icons-react";
+import { ChevronDown, Rocket } from "@wso2/oxygen-ui-icons-react";
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Autocomplete,
   Box,
   Button,
+  Checkbox,
+  Chip,
   Collapse,
   Form,
+  FormControl,
   FormControlLabel,
+  FormLabel,
   Skeleton,
   Switch,
   TextField,
@@ -94,6 +102,12 @@ export function DeploymentConfig({
     useState<boolean>(true);
   const [enableApiKeySecurity, setEnableApiKeySecurity] =
     useState<boolean>(true);
+  const [corsEnabled, setCorsEnabled] = useState<boolean>(true);
+  const [corsAllowAll, setCorsAllowAll] = useState<boolean>(true);
+  const [corsOrigins, setCorsOrigins] = useState<string[]>(["*"]);
+  const [corsMethods, setCorsMethods] = useState<string[]>(["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]);
+  const [corsHeaders, setCorsHeaders] = useState<string[]>(["authorization", "Content-Type", "Origin", "X-API-Key"]);
+  const [corsAllowCredentials, setCorsAllowCredentials] = useState<boolean>(false);
 
   const { mutate: deployAgent, isPending } = useDeployAgent();
   const { data: agent, isLoading: isLoadingAgent } = useGetAgent({
@@ -179,12 +193,29 @@ export function DeploymentConfig({
     }
   }, [agent?.configurations?.enableApiKeySecurity]);
 
+  useEffect(() => {
+    const cors = agent?.configurations?.corsConfig;
+    if (cors) {
+      if (cors.enabled !== undefined) setCorsEnabled(cors.enabled);
+      if (cors.allowOrigin !== undefined) {
+        const isWildcard = cors.allowOrigin.length === 1 && cors.allowOrigin[0] === "*";
+        setCorsAllowAll(isWildcard);
+        setCorsOrigins(cors.allowOrigin);
+      }
+      if (cors.allowMethods !== undefined) setCorsMethods(cors.allowMethods);
+      if (cors.allowHeaders !== undefined) setCorsHeaders(cors.allowHeaders);
+      if (cors.allowCredentials !== undefined) setCorsAllowCredentials(cors.allowCredentials);
+    }
+  }, [agent?.configurations?.corsConfig]);
+
   const isPythonBuildpack =
     agent?.build?.type === "buildpack" &&
     "buildpack" in agent.build &&
     agent.build.buildpack.language === "python";
 
   const isApiAgent = agent?.agentType?.type === "agent-api";
+
+  const hasWildcardOrigin = corsAllowAll || corsOrigins.includes("*");
 
   const lockedKeys = useMemo(
     () => new Set((configSchema ?? []).map((i) => i.name)),
@@ -289,6 +320,15 @@ export function DeploymentConfig({
             files: filteredFiles.length > 0 ? filteredFiles : undefined,
             ...(isPythonBuildpack && { enableAutoInstrumentation }),
             ...(isApiAgent && { enableApiKeySecurity }),
+            ...(isApiAgent && {
+              corsConfig: {
+                enabled: corsEnabled,
+                allowOrigin: hasWildcardOrigin ? ["*"] : corsOrigins,
+                allowMethods: corsMethods,
+                allowHeaders: corsHeaders,
+                allowCredentials: hasWildcardOrigin ? false : corsAllowCredentials,
+              },
+            }),
           },
         },
         {
@@ -416,6 +456,144 @@ export function DeploymentConfig({
 
           {isApiAgent && (
             <Form.Section>
+              <Form.Header>CORS Configuration</Form.Header>
+              <Form.Stack spacing={1}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={corsEnabled}
+                      onChange={(_, checked) => setCorsEnabled(checked)}
+                      disabled={isPending}
+                    />
+                  }
+                  label="Enable CORS"
+                />
+                <Typography variant="body2" color="text.secondary">
+                  Control which origins, methods, and headers are allowed to access this agent
+                  endpoint.
+                </Typography>
+                <Collapse in={corsEnabled}>
+                  <Accordion
+                    disableGutters
+                    elevation={0}
+                    sx={{ mt: 1, border: "1px solid", borderColor: "divider", borderRadius: 1, "&:before": { display: "none" } }}
+                  >
+                    <AccordionSummary expandIcon={<ChevronDown size={16} />}>
+                      <Typography variant="body2">Advanced</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Form.Stack spacing={2}>
+                        <Box display="flex" gap={2} alignItems="center">
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={corsAllowAll}
+                                onChange={(_, checked) => {
+                                  setCorsAllowAll(checked);
+                                  if (checked) {
+                                    setCorsAllowCredentials(false);
+                                    setCorsOrigins(["*"]);
+                                  } else {
+                                    setCorsOrigins((prev) => prev.filter((o) => o !== "*"));
+                                  }
+                                }}
+                                disabled={isPending}
+                              />
+                            }
+                            label="Allow all origins"
+                          />
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={corsAllowCredentials}
+                                onChange={(_, checked) => setCorsAllowCredentials(checked)}
+                                disabled={isPending || hasWildcardOrigin}
+                              />
+                            }
+                            label="Allow credentials"
+                          />
+                        </Box>
+                          {!corsAllowAll && (
+                            <FormControl fullWidth>
+                              <FormLabel>Allowed origins</FormLabel>
+                              <Autocomplete
+                                multiple
+                                freeSolo
+                                options={[]}
+                                value={corsOrigins}
+                                onChange={(_, newValue) => setCorsOrigins(newValue as string[])}
+                                renderTags={(tagValues, getTagProps) =>
+                                  tagValues.map((option, index) => (
+                                    <Chip
+                                      label={option as string}
+                                      size="small"
+                                      {...getTagProps({ index })}
+                                      key={option as string}
+                                    />
+                                  ))
+                                }
+                                renderInput={(params) => (
+                                  <TextField {...params} size="small" placeholder="Add origin and press Enter" />
+                                )}
+                              />
+                            </FormControl>
+                          )}
+                          <FormControl fullWidth>
+                            <FormLabel>Allowed methods</FormLabel>
+                            <Autocomplete
+                              multiple
+                              freeSolo
+                              options={[]}
+                              value={corsMethods}
+                              onChange={(_, newValue) => setCorsMethods(newValue as string[])}
+                              renderTags={(tagValues, getTagProps) =>
+                                tagValues.map((option, index) => (
+                                  <Chip
+                                    label={option as string}
+                                    size="small"
+                                    {...getTagProps({ index })}
+                                    key={option as string}
+                                  />
+                                ))
+                              }
+                              renderInput={(params) => (
+                                <TextField {...params} size="small" placeholder="Add method and press Enter" />
+                              )}
+                            />
+                          </FormControl>
+                          <FormControl fullWidth>
+                            <FormLabel>Allowed headers</FormLabel>
+                            <Autocomplete
+                              multiple
+                              freeSolo
+                              options={[]}
+                              value={corsHeaders}
+                              onChange={(_, newValue) => setCorsHeaders(newValue as string[])}
+                              renderTags={(tagValues, getTagProps) =>
+                                tagValues.map((option, index) => (
+                                  <Chip
+                                    label={option as string}
+                                    size="small"
+                                    {...getTagProps({ index })}
+                                    key={option as string}
+                                  />
+                                ))
+                              }
+                              renderInput={(params) => (
+                                <TextField {...params} size="small" placeholder="Add header and press Enter" />
+                              )}
+                            />
+                          </FormControl>
+                      </Form.Stack>
+                    </AccordionDetails>
+                  </Accordion>
+                </Collapse>
+              </Form.Stack>
+            </Form.Section>
+          )}
+
+          {isApiAgent && (
+            <Form.Section>
               <Form.Header>Endpoint Authentication</Form.Header>
               <Form.Stack spacing={1}>
                 <FormControlLabel
@@ -434,13 +612,12 @@ export function DeploymentConfig({
                   Secure your agent endpoint with API key authentication.
                 </Typography>
                 <Collapse in={enableApiKeySecurity}>
-                  <TextField
+                  <TextInput
                     label="Header"
                     value="X-API-Key"
                     size="small"
                     fullWidth
                     disabled
-                    slotProps={{ inputLabel: { shrink: true } }}
                     sx={{ mt: 1 }}
                   />
                 </Collapse>

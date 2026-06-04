@@ -63,7 +63,7 @@ func loadEnvs() {
 	config.CORSAllowedOrigin = r.readOptionalString("CORS_ALLOWED_ORIGIN", "http://localhost:3000")
 
 	agentWorkloadConfig.CORS = CORSConfig{
-		AllowOrigin:      r.readOptionalString("AGENT_WORKLOAD_CORS_ALLOWED_ORIGIN", "http://localhost:3000"),
+		AllowOrigin:      r.readOptionalString("AGENT_WORKLOAD_CORS_ALLOWED_ORIGIN", "*"),
 		AllowMethods:     r.readOptionalString("AGENT_WORKLOAD_CORS_ALLOWED_METHODS", "GET,POST,PUT,DELETE,PATCH,OPTIONS"),
 		AllowHeaders:     r.readOptionalString("AGENT_WORKLOAD_CORS_ALLOWED_HEADERS", "authorization,Content-Type,Origin,X-API-Key"),
 		AllowCredentials: r.readOptionalBool("AGENT_WORKLOAD_CORS_ALLOW_CREDENTIALS", false),
@@ -250,6 +250,7 @@ func loadEnvs() {
 	validateServerPublicURL(config, r)
 	validateInstrumentationURL(config, r)
 	validateResourceLimitsConfig(config, r)
+	validateAgentWorkloadCORSConfig(agentWorkloadConfig, r)
 
 	r.logAndExitIfErrorsFound()
 
@@ -340,6 +341,12 @@ func validateInternalServerConfigs(cfg *Config, r *configReader) {
 	}
 	if cfg.InternalServer.CertDir == "" {
 		r.errors = append(r.errors, fmt.Errorf("INTERNAL_SERVER_CERT_DIR must be non-empty"))
+	}
+}
+
+func validateAgentWorkloadCORSConfig(cfg *AgentWorkload, r *configReader) {
+	if cfg.CORS.AllowOrigin == "*" && cfg.CORS.AllowCredentials {
+		r.errors = append(r.errors, fmt.Errorf("AGENT_WORKLOAD_CORS_ALLOW_CREDENTIALS cannot be true when AGENT_WORKLOAD_CORS_ALLOWED_ORIGIN is \"*\""))
 	}
 }
 

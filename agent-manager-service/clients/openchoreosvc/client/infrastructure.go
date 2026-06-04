@@ -439,16 +439,54 @@ func (c *openChoreoClient) UpdateDeploymentPipeline(ctx context.Context, namespa
 }
 
 func (c *openChoreoClient) ListDeploymentPipelines(ctx context.Context, namespaceName string) ([]*models.DeploymentPipelineResponse, error) {
-	// API does not support listing deployment pipelines directly
-	return nil, fmt.Errorf("not implemented: API does not support listing deployment pipelines")
+	// OpenChoreo has no list-pipelines endpoint; derive the set from projects.
+	projects, err := c.ListProjects(ctx, namespaceName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list projects: %w", err)
+	}
+
+	// Collect unique pipeline names across all projects.
+	seen := make(map[string]struct{})
+	var pipelineNames []string
+	for _, p := range projects {
+		if p.DeploymentPipeline == "" {
+			continue
+		}
+		if _, exists := seen[p.DeploymentPipeline]; !exists {
+			seen[p.DeploymentPipeline] = struct{}{}
+			pipelineNames = append(pipelineNames, p.DeploymentPipeline)
+		}
+	}
+
+	pipelines := make([]*models.DeploymentPipelineResponse, 0, len(pipelineNames))
+	for _, name := range pipelineNames {
+		resp, err := c.ocClient.GetDeploymentPipelineWithResponse(ctx, namespaceName, name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get deployment pipeline %s: %w", name, err)
+		}
+		if resp.StatusCode() != http.StatusOK {
+			return nil, handleErrorResponse(resp.StatusCode(), ErrorResponses{
+				JSON401: resp.JSON401,
+				JSON403: resp.JSON403,
+				JSON404: resp.JSON404,
+				JSON500: resp.JSON500,
+			})
+		}
+		if resp.JSON200 == nil {
+			continue
+		}
+		pipelines = append(pipelines, convertDeploymentPipeline(resp.JSON200, namespaceName))
+	}
+
+	return pipelines, nil
 }
 
 // -----------------------------------------------------------------------------
 // Data Plane Operations
 // -----------------------------------------------------------------------------
 
-func (c *openChoreoClient) ListDataPlanes(ctx context.Context, namespaceName string) ([]*models.DataPlaneResponse, error) {
-	resp, err := c.ocClient.ListDataPlanesWithResponse(ctx, namespaceName, nil)
+func (c *openChoreoClient) ListDataPlanes(ctx context.Context) ([]*models.DataPlaneResponse, error) {
+	resp, err := c.ocClient.ListClusterDataPlanesWithResponse(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list data planes: %w", err)
 	}
@@ -477,7 +515,6 @@ func (c *openChoreoClient) ListDataPlanes(ctx context.Context, namespaceName str
 
 		dataPlanes[i] = &models.DataPlaneResponse{
 			Name:        dp.Metadata.Name,
-			OrgName:     namespaceName,
 			DisplayName: displayName,
 			Description: description,
 			CreatedAt:   createdAt,

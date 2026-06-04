@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import { httpGET, httpPOST, SERVICE_BASE } from '../utils';
+import { httpGET, httpPOST, httpPUT, SERVICE_BASE } from '../utils';
 import type {
   DeployAgentPathParams,
   DeployAgentRequest,
@@ -40,6 +40,16 @@ import type {
   UpdateDeploymentStatePathParams,
   UpdateDeploymentStateRequest,
   UpdateDeploymentStateResponse,
+  PromoteAgentPathParams,
+  PromoteAgentRequest,
+  PromoteAgentResponse,
+  UpdateDeploymentPipelinePathParams,
+  UpdateDeploymentPipelineRequest,
+  UpdateEnvironmentPathParams,
+  UpdateEnvironmentRequest,
+  Environment,
+  CreateEnvironmentRequest,
+  CreateEnvironmentPathParams,
 } from '@agent-management-platform/types';
 
 
@@ -199,4 +209,70 @@ export async function updateDeploymentState(params: UpdateDeploymentStatePathPar
     return res.json();
 }
 
+// eslint-disable-next-line max-len
+export async function promoteAgent(params: PromoteAgentPathParams, body: PromoteAgentRequest, getToken?: () => Promise<string>)
+: Promise<PromoteAgentResponse> {
+    const { orgName = "default", projName = "default", agentName } = params;
 
+    if (!agentName) {
+        throw new Error("agentName is required");
+    }
+
+    const token = getToken ? await getToken() : undefined;
+    const res = await httpPOST(
+        `${SERVICE_BASE}/orgs/${encodeURIComponent(orgName)}/projects/${encodeURIComponent(projName)}/agents/${encodeURIComponent(agentName)}/promote`,
+        body,
+        { token },
+    );
+    if (!res.ok) throw await res.json();
+    return res.json();
+}
+
+// eslint-disable-next-line max-len
+export async function updateDeploymentPipeline(params: UpdateDeploymentPipelinePathParams, body: UpdateDeploymentPipelineRequest, getToken?: () => Promise<string>)
+: Promise<DeploymentPipelineResponse> {
+    const { orgName = "default", projName = "default" } = params;
+    const token = getToken ? await getToken() : undefined;
+    const res = await httpPUT(
+        `${SERVICE_BASE}/orgs/${encodeURIComponent(orgName)}/projects/${encodeURIComponent(projName)}/deployment-pipeline`,
+        body,
+        { token },
+    );
+    if (!res.ok) throw await res.json();
+    return res.json();
+}
+
+// eslint-disable-next-line max-len
+export async function updateEnvironment(params: UpdateEnvironmentPathParams, body: UpdateEnvironmentRequest, getToken?: () => Promise<string>)
+: Promise<Environment> {
+    const { orgName = "default", envName } = params;
+
+    if (!envName) {
+        throw new Error("envName is required");
+    }
+
+    const token = getToken ? await getToken() : undefined;
+    const res = await httpPUT(
+        `${SERVICE_BASE}/orgs/${encodeURIComponent(orgName)}/environments/${encodeURIComponent(envName)}`,
+        body,
+        { token },
+    );
+    if (!res.ok) throw await res.json();
+    return res.json();
+}
+
+export async function createEnvironment(
+    params: CreateEnvironmentPathParams,
+    body: CreateEnvironmentRequest,
+    getToken?: () => Promise<string>,
+): Promise<Environment> {
+    const { orgName = "default" } = params;
+    const token = getToken ? await getToken() : undefined;
+    const res = await httpPOST(
+        `${SERVICE_BASE}/orgs/${encodeURIComponent(orgName)}/environments`,
+        body,
+        { token },
+    );
+    if (!res.ok) throw await res.json();
+    return res.json();
+}

@@ -45,6 +45,10 @@ import { metaData as evalMetadata } from "@agent-management-platform/eval";
 import { metaData as llmProvidersMetadata } from "@agent-management-platform/llm-providers";
 import { metaData as agentKindMetadata } from "@agent-management-platform/agent-kind";
 import { gatewaysMetadata } from "@agent-management-platform/gateways";
+import {
+  metaData as deploymentPipelinesMetadata,
+  environmentsMetaData,
+} from "@agent-management-platform/deployment-pipelines";
 import type { NavigationItem, NavigationSection } from "./LeftNavigation";
 import { metaData as configureAgentMetadata } from "@agent-management-platform/configure-agent"
 import { metaData as agentSecurityMetadata } from "@agent-management-platform/agent-security";
@@ -89,6 +93,18 @@ export function useNavigationItems(): Array<
       { path: string; wildPath: string }
     >
   ).gateways;
+  const deploymentPipelinesOrgRoute = (
+    absoluteRouteMap.children.org.children as unknown as Record<
+      string,
+      { path: string; wildPath: string }
+    >
+  ).deploymentPipelines;
+  const environmentsOrgRoute = (
+    absoluteRouteMap.children.org.children as unknown as Record<
+      string,
+      { path: string; wildPath: string }
+    >
+  ).environments;
   const evaluatorsOrgRoute = absoluteRouteMap.children.org.children.evaluators;
 
   if (isLoadingAgent || (isLoadingEnvironments && agentId)) {
@@ -638,6 +654,20 @@ export function useNavigationItems(): Array<
             icon: <gatewaysMetadata.icon size={20} />,
             href: generatePath(gatewaysOrgRoute.path, { orgId }),
             isActive: !!matchPath(gatewaysOrgRoute.wildPath, pathname),
+          },
+          {
+            label: deploymentPipelinesMetadata.title,
+            type: "item",
+            icon: <deploymentPipelinesMetadata.icon size={20} />,
+            href: generatePath(deploymentPipelinesOrgRoute.path, { orgId }),
+            isActive: !!matchPath(deploymentPipelinesOrgRoute.wildPath, pathname),
+          },
+          {
+            label: environmentsMetaData.title,
+            type: "item",
+            icon: <environmentsMetaData.icon size={20} />,
+            href: generatePath(environmentsOrgRoute.path, { orgId }),
+            isActive: !!matchPath(environmentsOrgRoute.wildPath, pathname),
           },
         ],
       },
