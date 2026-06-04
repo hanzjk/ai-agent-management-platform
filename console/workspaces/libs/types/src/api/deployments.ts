@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import { type AgentPathParams, type EnvironmentVariable, type FileMount, type EndpointSchema, type OrgProjPathParams, type PaginationMeta, type ListQuery } from './common';
+import { type AgentPathParams, type CorsConfig, type EnvironmentVariable, type FileMount, type EndpointSchema, type OrgProjPathParams, type PaginationMeta, type ListQuery } from './common';
 
 // Requests
 export interface DeployAgentRequest {
@@ -26,6 +26,7 @@ export interface DeployAgentRequest {
   enableAutoInstrumentation?: boolean;
   instrumentationVersion?: string;
   enableApiKeySecurity?: boolean;
+  corsConfig?: CorsConfig;
 }
 
 // Responses
@@ -169,3 +170,57 @@ export interface UpdateDeploymentStateResponse {
 }
 
 export type UpdateDeploymentStatePathParams = AgentPathParams;
+
+// Promote Agent
+export interface PromoteAgentRequest {
+  sourceEnvironment: string;
+  targetEnvironment: string;
+  useConfigFromSourceEnv?: boolean;
+  env?: EnvironmentVariable[];
+  files?: FileMount[];
+  enableAutoInstrumentation?: boolean;
+  enableApiKeySecurity?: boolean;
+  corsConfig?: CorsConfig;
+}
+
+export interface PromoteAgentResponse {
+  agentName?: string;
+  projectName?: string;
+  sourceEnvironment?: string;
+  targetEnvironment?: string;
+}
+
+export type PromoteAgentPathParams = AgentPathParams;
+
+// Update Deployment Pipeline
+export interface UpdateDeploymentPipelineRequest {
+  displayName?: string;
+  description?: string;
+  promotionPaths: PromotionPath[];
+}
+
+export type UpdateDeploymentPipelinePathParams = OrgProjPathParams;
+
+// Update Environment
+export interface UpdateEnvironmentRequest {
+  displayName?: string;
+  description?: string;
+  isProduction?: boolean;
+}
+
+export interface UpdateEnvironmentPathParams {
+  orgName: string | undefined;
+  envName: string | undefined;
+}
+
+// Create Environment
+export interface CreateEnvironmentRequest {
+  name: string;
+  displayName: string;
+  description?: string;
+  dataplaneRef: string;
+  dnsPrefix: string;
+  isProduction?: boolean;
+}
+
+export type CreateEnvironmentPathParams = { orgName: string | undefined };

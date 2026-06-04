@@ -94,6 +94,16 @@ export const rootRouteMap: AppRoute = {
                         },
                     },
                 },
+                deploymentPipelines: {
+                    path: 'deployment-pipelines',
+                    index: true,
+                    children: {},
+                },
+                environments: {
+                    path: 'environments',
+                    index: true,
+                    children: {},
+                },
                 catalog: {
                     path: 'catalog',
                     index: true,
