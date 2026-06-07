@@ -53,10 +53,20 @@ if ! $BACKGROUND; then
     trap cleanup EXIT INT TERM
 fi
 
+# PORT_FORWARD_ADDRESS optionally binds the forwards to a specific address.
+# Unset = kubectl default (127.0.0.1). CI sets 0.0.0.0 so the agent-manager
+# container (docker-compose) can reach them via the host/bridge gateway —
+# a 127.0.0.1-only forward is unreachable from inside the container on Linux.
+PF_ADDRESS="${PORT_FORWARD_ADDRESS:-}"
+
 start_forward() {
     local desc="$1"; shift
     echo "   $desc"
-    kubectl port-forward "$@" > /dev/null 2>&1 &
+    if [ -n "$PF_ADDRESS" ]; then
+        kubectl port-forward --address "$PF_ADDRESS" "$@" > /dev/null 2>&1 &
+    else
+        kubectl port-forward "$@" > /dev/null 2>&1 &
+    fi
 }
 
 if $PLATFORM; then

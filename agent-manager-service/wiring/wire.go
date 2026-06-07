@@ -30,11 +30,13 @@ import (
 	observabilitysvc "github.com/wso2/agent-manager/agent-manager-service/clients/observabilitysvc"
 	occlient "github.com/wso2/agent-manager/agent-manager-service/clients/openchoreosvc/client"
 	"github.com/wso2/agent-manager/agent-manager-service/clients/secretmanagersvc"
+	"github.com/wso2/agent-manager/agent-manager-service/clients/thundersvc"
 	traceobserversvc "github.com/wso2/agent-manager/agent-manager-service/clients/traceobserversvc"
 	"github.com/wso2/agent-manager/agent-manager-service/config"
 	"github.com/wso2/agent-manager/agent-manager-service/controllers"
 	"github.com/wso2/agent-manager/agent-manager-service/eventhub"
 	"github.com/wso2/agent-manager/agent-manager-service/instrumentation"
+	"github.com/wso2/agent-manager/agent-manager-service/middleware"
 	"github.com/wso2/agent-manager/agent-manager-service/middleware/jwtassertion"
 	"github.com/wso2/agent-manager/agent-manager-service/repositories"
 	"github.com/wso2/agent-manager/agent-manager-service/services"
@@ -54,6 +56,8 @@ var clientProviderSet = wire.NewSet(
 	ProvideOCClient,
 	ProvideSecretManagementClient,
 	ProvidePublisherProvisioner,
+	ProvideIdentityClient,
+	ProvideOrgResolver,
 )
 
 var serviceProviderSet = wire.NewSet(
@@ -85,6 +89,7 @@ var serviceProviderSet = wire.NewSet(
 	services.NewAgentConfigurationService,
 	services.NewLLMTemplateStore,
 	services.NewGitSecretService,
+	services.NewAIApplicationService,
 )
 
 var instrumentationProviderSet = wire.NewSet(
@@ -117,6 +122,7 @@ var controllerProviderSet = wire.NewSet(
 	ProvideAgentBuildOptionsController,
 	controllers.NewAgentConfigurationController,
 	controllers.NewGitSecretController,
+	controllers.NewIdentityController,
 )
 
 var testClientProviderSet = wire.NewSet(
@@ -125,6 +131,8 @@ var testClientProviderSet = wire.NewSet(
 	ProvideTestTraceObserverClient,
 	ProvideTestSecretManagementClient,
 	ProvidePublisherProvisioner,
+	ProvideIdentityClient,
+	ProvideOrgResolver,
 )
 
 // ProvideLogger provides the configured slog.Logger instance
@@ -313,6 +321,7 @@ var repositoryProviderSet = wire.NewSet(
 	repositories.NewAgentEnvConfigVariableRepository,
 	repositories.NewMonitorLLMMappingRepository,
 	ProvideOrgPublisherCredentialRepository,
+	ProvideAIApplicationRepository,
 )
 
 var websocketProviderSet = wire.NewSet(
@@ -436,8 +445,22 @@ func ProvideAgentKindRepository(db *gorm.DB) repositories.AgentKindRepository {
 	return repositories.NewAgentKindRepo(db)
 }
 
+func ProvideAIApplicationRepository(db *gorm.DB) repositories.AIApplicationRepository {
+	return repositories.NewAIApplicationRepository(db)
+}
+
 func ProvideThunderConfig(cfg config.Config) config.ThunderConfig {
 	return cfg.Thunder
+}
+
+// ProvideIdentityClient creates a Thunder identity client using the Thunder system app credentials.
+func ProvideIdentityClient(cfg config.ThunderConfig) thundersvc.IdentityClient {
+	return thundersvc.NewIdentityClient(cfg.BaseURL, cfg.ClientID, cfg.ClientSecret)
+}
+
+// ProvideOrgResolver creates the org resolver backed by Thunder, with a per-org OU ID cache.
+func ProvideOrgResolver(client thundersvc.IdentityClient) middleware.OrgResolver {
+	return middleware.NewOrgResolver(client)
 }
 
 // InitializeAppParams wires up all application dependencies

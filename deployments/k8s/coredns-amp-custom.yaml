@@ -17,3 +17,12 @@ data:
       name regex (.+\.)?amp\.localhost host.k3d.internal
       answer auto
     }
+  # The dev gateway chart + setup-gateway.sh reach agent-manager via
+  # host.docker.internal (Docker Desktop / Colima inject it into k3d pods).
+  # A plain Linux k3d runner (CI) has no such injection, so fold it onto
+  # host.k3d.internal, which k3d guarantees on every platform.
+  hostdocker.override: |
+    rewrite stop {
+      name regex host\.docker\.internal host.k3d.internal
+      answer auto
+    }

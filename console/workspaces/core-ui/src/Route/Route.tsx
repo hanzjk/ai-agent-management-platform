@@ -33,6 +33,7 @@ import {
   LazyGatewaysOrg,
   LazyDeploymentPipelinesOrg,
   LazyEnvironmentsOrg,
+  LazyIdentitiesOrg,
   LazyCatalogOrg,
   LazyAddNewAgent,
   LazyAddNewProject,
@@ -135,6 +136,12 @@ export function RootRouter() {
                 relativeRouteMap.children.org.children.environments.path + "/*"
               }
               element={<LazyEnvironmentsOrg />}
+            />
+            <Route
+              path={
+                relativeRouteMap.children.org.children.identities.path + "/*"
+              }
+              element={<LazyIdentitiesOrg />}
             />
             <Route
               path={

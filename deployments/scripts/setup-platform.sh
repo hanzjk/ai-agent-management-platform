@@ -77,7 +77,16 @@ echo "🚀 Starting Agent Manager platform services..."
 # Export console host path so docker-compose can align WORKDIR with the host,
 # preventing Rush temp-file / node_modules path mismatches.
 export CONSOLE_HOST_PATH="$(cd "$SCRIPT_DIR/../../console" && pwd)"
-docker compose -f "$COMPOSE_FILE" up -d
+# COMPOSE_SERVICES optionally restricts the bring-up to a subset of services
+# (e.g. CI heavy tier skips the console). Unset = all services (local default).
+# Split on whitespace into an array so multiple services work without exposing
+# the value to glob expansion.
+if [ -n "${COMPOSE_SERVICES:-}" ]; then
+    read -r -a compose_services <<< "${COMPOSE_SERVICES}"
+    docker compose -f "$COMPOSE_FILE" up -d "${compose_services[@]}"
+else
+    docker compose -f "$COMPOSE_FILE" up -d
+fi
 
 echo ""
 echo "⏳ Waiting for services to be healthy..."

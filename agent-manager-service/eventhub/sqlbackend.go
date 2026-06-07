@@ -566,10 +566,10 @@ func (b *SQLBackend) pollGatewayWithState(gw *gateway, state GatewayState) error
 	subscriberCountAtCheck := len(gw.subscribers)
 	b.registry.mu.RUnlock()
 
-	// On cold start with no active subscribers, filter to current desired state:
-	// skip API key events (gateway bulk-syncs those on reconnect) and keep only
-	// the latest event per entity_id for all other types. When subscribers ARE
-	// present we deliver all events verbatim — deduplication must not drop live
+	// On cold start with no active subscribers at the time of the check, filter to
+	// current desired state: skip API key events (gateway bulk-syncs those on reconnect)
+	// and keep only the latest event per entity_id for all other types. When subscribers
+	// ARE present we deliver all events verbatim — deduplication must not drop live
 	// apikey events that arrived while the gateway was connected.
 	//
 	// Also track the last raw event before dedup so we can advance the cursor

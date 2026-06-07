@@ -321,7 +321,8 @@ for line in lines:
     line = line.strip()
     if not line or line.startswith('#'):
         continue
-    name = re.split(r'[><=!~;\s]', line)[0].strip()
+    # Drop version/marker specifiers and any extras bracket (e.g. "foo[bar]==1").
+    name = re.split(r'[><=!~;\s\[]', line)[0].strip()
     if name:
         names.append(name)
 

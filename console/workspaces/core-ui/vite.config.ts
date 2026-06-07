@@ -65,6 +65,7 @@ export default defineConfig({
       '@agent-management-platform/agent-security': path.resolve(__dirname, '../pages/agent-security/src'),
       '@agent-management-platform/agent-kind': path.resolve(__dirname, '../pages/agent-kind/src'),
       '@agent-management-platform/deployment-pipelines': path.resolve(__dirname, '../pages/deployment-pipelines/src'),
+      '@agent-management-platform/identities': path.resolve(__dirname, '../pages/identities/src'),
     },
   },
   build: {
