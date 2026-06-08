@@ -63,9 +63,14 @@ export const InternalAgentOverview = () => {
     const paths = pipelinesData?.deploymentPipelines
       ?.find((p) => p.name === project?.deploymentPipeline)?.promotionPaths ?? [];
     if (!paths.length) return [];
-    const allTargets = new Set(paths.flatMap((p) => p.targetEnvironmentRefs.map((t) => t.name)));
-    const adjacency = new Map(paths.map((p) => [p.sourceEnvironmentRef, p.targetEnvironmentRefs.map((t) => t.name)]));
-    const roots = [...new Set(paths.map((p) => p.sourceEnvironmentRef))].filter((s) => !allTargets.has(s));
+    const allTargets = new Set(
+      paths.flatMap((p) => p.targetEnvironmentRefs.map((t) => t.name)),
+    );
+    const adjacency = new Map(
+      paths.map((p) => [p.sourceEnvironmentRef, p.targetEnvironmentRefs.map((t) => t.name)]),
+    );
+    const roots = [...new Set(paths.map((p) => p.sourceEnvironmentRef))]
+      .filter((s) => !allTargets.has(s));
     const chain: string[] = [];
     const visited = new Set<string>();
     let current: string | undefined = roots[0];
