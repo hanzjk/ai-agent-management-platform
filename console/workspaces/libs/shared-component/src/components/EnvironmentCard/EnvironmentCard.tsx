@@ -314,7 +314,8 @@ export const EnvironmentCard = (props: EnvironmentCardProps) => {
           {currentDeployment.status === DeploymentStatus.DEPLOYING && (
             <NoDataFound disableBackground message="Deploying..." icon={<CircularProgress size={32} />} />
           )}
-          {currentDeployment.status === DeploymentStatus.ERROR && (
+          {(currentDeployment.status === DeploymentStatus.ERROR ||
+            currentDeployment.status === DeploymentStatus.FAILED) && (
             <NoDataFound
               disableBackground
               message="Deployment Failed"

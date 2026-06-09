@@ -431,6 +431,14 @@ export function DeployCard(props: DeployCardProps) {
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
   const debouncedRedeploy = useCallback(() => {
     clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {

@@ -85,12 +85,15 @@ export const InternalAgentOverview = () => {
 
   const sortedEnvironmentList = useMemo(() => {
     if (!environmentList) return [];
-    if (!pipelineEnvOrder.length) {
-      return [...environmentList].sort((_a, b) => (b.isProduction ? -1 : 0));
-    }
-    return pipelineEnvOrder
-      .map((name) => environmentList.find((e) => e.name === name))
-      .filter(Boolean) as typeof environmentList;
+    const orderIndex = new Map(pipelineEnvOrder.map((name, idx) => [name, idx]));
+    return [...environmentList].sort((a, b) => {
+      const ai = orderIndex.get(a.name);
+      const bi = orderIndex.get(b.name);
+      if (ai !== undefined && bi !== undefined) return ai - bi;
+      if (ai !== undefined) return -1;
+      if (bi !== undefined) return 1;
+      return Number(b.isProduction) - Number(a.isProduction);
+    });
   }, [environmentList, pipelineEnvOrder]);
 
   const isKindAgent = !!agent?.kindName;
