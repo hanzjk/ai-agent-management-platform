@@ -19,6 +19,8 @@
 import {
   useGetAgent,
   useGetAgentBuilds,
+  useGetProject,
+  useListDeploymentPipelines,
   useListEnvironments,
 } from "@agent-management-platform/api-client";
 import {
@@ -52,19 +54,44 @@ export const InternalAgentOverview = () => {
     projName: projectId,
     agentName: agentId,
   });
-  const { data: environmentList } = useListEnvironments({
-    orgName: orgId,
-  });
+  const { data: environmentList } = useListEnvironments({ orgName: orgId });
+  const { data: project } = useGetProject({ orgName: orgId, projName: projectId });
+  const { data: pipelinesData } = useListDeploymentPipelines({ orgName: orgId });
   const theme = useTheme();
 
+  const pipelineEnvOrder = useMemo(() => {
+    const paths = pipelinesData?.deploymentPipelines
+      ?.find((p) => p.name === project?.deploymentPipeline)?.promotionPaths ?? [];
+    if (!paths.length) return [];
+    const allTargets = new Set(
+      paths.flatMap((p) => p.targetEnvironmentRefs.map((t) => t.name)),
+    );
+    const adjacency = new Map(
+      paths.map((p) => [p.sourceEnvironmentRef, p.targetEnvironmentRefs.map((t) => t.name)]),
+    );
+    const roots = [...new Set(paths.map((p) => p.sourceEnvironmentRef))]
+      .filter((s) => !allTargets.has(s));
+    const chain: string[] = [];
+    const visited = new Set<string>();
+    let current: string | undefined = roots[0];
+    while (current && !visited.has(current)) {
+      chain.push(current);
+      visited.add(current);
+      current = (adjacency.get(current) ?? [])[0];
+    }
+    allTargets.forEach((t) => { if (!visited.has(t)) chain.push(t); });
+    return chain;
+  }, [pipelinesData, project?.deploymentPipeline]);
+
   const sortedEnvironmentList = useMemo(() => {
-    return environmentList?.sort((_a, b) => {
-      if (b.isProduction) {
-        return -1;
-      }
-      return 0;
-    });
-  }, [environmentList]);
+    if (!environmentList) return [];
+    if (!pipelineEnvOrder.length) {
+      return [...environmentList].sort((_a, b) => (b.isProduction ? -1 : 0));
+    }
+    return pipelineEnvOrder
+      .map((name) => environmentList.find((e) => e.name === name))
+      .filter(Boolean) as typeof environmentList;
+  }, [environmentList, pipelineEnvOrder]);
 
   const isKindAgent = !!agent?.kindName;
 

@@ -27,6 +27,9 @@ import (
 //			CreateComponentFunc: func(ctx context.Context, namespaceName string, projectName string, req client.CreateComponentRequest) error {
 //				panic("mock out the CreateComponent method")
 //			},
+//			CreateDeploymentPipelineFunc: func(ctx context.Context, namespaceName string, pipelineName string, displayName *string, description *string, promotionPaths []models.PromotionPath) (*models.DeploymentPipelineResponse, error) {
+//				panic("mock out the CreateDeploymentPipeline method")
+//			},
 //			CreateEnvironmentFunc: func(ctx context.Context, namespaceName string, req client.CreateEnvironmentRequest) (*models.EnvironmentResponse, error) {
 //				panic("mock out the CreateEnvironment method")
 //			},
@@ -231,6 +234,9 @@ type OpenChoreoClientMock struct {
 
 	// CreateComponentFunc mocks the CreateComponent method.
 	CreateComponentFunc func(ctx context.Context, namespaceName string, projectName string, req client.CreateComponentRequest) error
+
+	// CreateDeploymentPipelineFunc mocks the CreateDeploymentPipeline method.
+	CreateDeploymentPipelineFunc func(ctx context.Context, namespaceName string, pipelineName string, displayName *string, description *string, promotionPaths []models.PromotionPath) (*models.DeploymentPipelineResponse, error)
 
 	// CreateEnvironmentFunc mocks the CreateEnvironment method.
 	CreateEnvironmentFunc func(ctx context.Context, namespaceName string, req client.CreateEnvironmentRequest) (*models.EnvironmentResponse, error)
@@ -457,6 +463,21 @@ type OpenChoreoClientMock struct {
 			ProjectName string
 			// Req is the req argument value.
 			Req client.CreateComponentRequest
+		}
+		// CreateDeploymentPipeline holds details about calls to the CreateDeploymentPipeline method.
+		CreateDeploymentPipeline []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// NamespaceName is the namespaceName argument value.
+			NamespaceName string
+			// PipelineName is the pipelineName argument value.
+			PipelineName string
+			// DisplayName is the displayName argument value.
+			DisplayName *string
+			// Description is the description argument value.
+			Description *string
+			// PromotionPaths is the promotionPaths argument value.
+			PromotionPaths []models.PromotionPath
 		}
 		// CreateEnvironment holds details about calls to the CreateEnvironment method.
 		CreateEnvironment []struct {
@@ -1159,6 +1180,7 @@ type OpenChoreoClientMock struct {
 	lockAttachTraits                        sync.RWMutex
 	lockComponentExists                     sync.RWMutex
 	lockCreateComponent                     sync.RWMutex
+	lockCreateDeploymentPipeline            sync.RWMutex
 	lockCreateEnvironment                   sync.RWMutex
 	lockCreateGitSecret                     sync.RWMutex
 	lockCreateInternalAgentFromKindWorkload sync.RWMutex
@@ -1357,6 +1379,58 @@ func (mock *OpenChoreoClientMock) CreateComponentCalls() []struct {
 	mock.lockCreateComponent.RLock()
 	calls = mock.calls.CreateComponent
 	mock.lockCreateComponent.RUnlock()
+	return calls
+}
+
+// CreateDeploymentPipeline calls CreateDeploymentPipelineFunc.
+func (mock *OpenChoreoClientMock) CreateDeploymentPipeline(ctx context.Context, namespaceName string, pipelineName string, displayName *string, description *string, promotionPaths []models.PromotionPath) (*models.DeploymentPipelineResponse, error) {
+	if mock.CreateDeploymentPipelineFunc == nil {
+		panic("OpenChoreoClientMock.CreateDeploymentPipelineFunc: method is nil but OpenChoreoClient.CreateDeploymentPipeline was just called")
+	}
+	callInfo := struct {
+		Ctx            context.Context
+		NamespaceName  string
+		PipelineName   string
+		DisplayName    *string
+		Description    *string
+		PromotionPaths []models.PromotionPath
+	}{
+		Ctx:            ctx,
+		NamespaceName:  namespaceName,
+		PipelineName:   pipelineName,
+		DisplayName:    displayName,
+		Description:    description,
+		PromotionPaths: promotionPaths,
+	}
+	mock.lockCreateDeploymentPipeline.Lock()
+	mock.calls.CreateDeploymentPipeline = append(mock.calls.CreateDeploymentPipeline, callInfo)
+	mock.lockCreateDeploymentPipeline.Unlock()
+	return mock.CreateDeploymentPipelineFunc(ctx, namespaceName, pipelineName, displayName, description, promotionPaths)
+}
+
+// CreateDeploymentPipelineCalls gets all the calls that were made to CreateDeploymentPipeline.
+// Check the length with:
+//
+//	len(mockedOpenChoreoClient.CreateDeploymentPipelineCalls())
+func (mock *OpenChoreoClientMock) CreateDeploymentPipelineCalls() []struct {
+	Ctx            context.Context
+	NamespaceName  string
+	PipelineName   string
+	DisplayName    *string
+	Description    *string
+	PromotionPaths []models.PromotionPath
+} {
+	var calls []struct {
+		Ctx            context.Context
+		NamespaceName  string
+		PipelineName   string
+		DisplayName    *string
+		Description    *string
+		PromotionPaths []models.PromotionPath
+	}
+	mock.lockCreateDeploymentPipeline.RLock()
+	calls = mock.calls.CreateDeploymentPipeline
+	mock.lockCreateDeploymentPipeline.RUnlock()
 	return calls
 }
 

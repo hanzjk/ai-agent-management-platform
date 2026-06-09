@@ -167,6 +167,9 @@ func CreateMockOpenChoreoClient() *clientmocks.OpenChoreoClientMock {
 		ReplaceReleaseBindingEnvVarsFunc: func(ctx context.Context, namespaceName string, projectName string, componentName string, envName string, keysToRemove []string, envVarsToAdd []client.EnvVar) error {
 			return nil
 		},
+		UpdateReleaseBindingTraitConfigsFunc: func(ctx context.Context, namespaceName string, componentName string, environment string, traitConfigs map[string]interface{}) error {
+			return nil
+		},
 		GetComponentConfigurationsFunc: func(ctx context.Context, namespaceName string, projectName string, componentName string, environment string) ([]models.EnvVars, error) {
 			return nil, nil
 		},

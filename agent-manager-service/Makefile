@@ -53,12 +53,15 @@ spec: ## Code gen type/client for openapi spec.
 	sh scripts/gen_client.sh
 	sh scripts/fmt.sh
 
+# oapi-codegen version is pinned to stay compatible with github.com/oapi-codegen/runtime in go.mod.
+OAPI_CODEGEN := go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.4.1
+
 .PHONY: gen-oc-client
 gen-oc-client: ## Generate OpenChoreo API client from upstream OpenAPI spec.
 	@echo "Generating OpenChoreo client from upstream spec"
 	@curl -sL "https://raw.githubusercontent.com/openchoreo/openchoreo/v1.0.1/openapi/openchoreo-api.yaml" -o /tmp/openchoreo-api.yaml
-	@oapi-codegen -config clients/openchoreosvc/gen/oapi-codegen.yaml /tmp/openchoreo-api.yaml
-	@oapi-codegen -config clients/openchoreosvc/gen/oapi-codegen-client.yaml /tmp/openchoreo-api.yaml
+	@$(OAPI_CODEGEN) -config clients/openchoreosvc/gen/oapi-codegen.yaml /tmp/openchoreo-api.yaml
+	@$(OAPI_CODEGEN) -config clients/openchoreosvc/gen/oapi-codegen-client.yaml /tmp/openchoreo-api.yaml
 	@rm /tmp/openchoreo-api.yaml
 	@$(MAKE) fmt
 	@echo "OpenChoreo client generated successfully"
@@ -67,8 +70,8 @@ gen-oc-client: ## Generate OpenChoreo API client from upstream OpenAPI spec.
 gen-observer-client: ## Generate Observer API client from upstream OpenAPI spec.
 	@echo "Generating Observer client from upstream spec"
 	@curl -sL "https://raw.githubusercontent.com/openchoreo/openchoreo/v1.0.1/openapi/observer-api.yaml" -o /tmp/observer-api.yaml
-	@oapi-codegen -config clients/observabilitysvc/gen/oapi-codegen.yaml /tmp/observer-api.yaml
-	@oapi-codegen -config clients/observabilitysvc/gen/oapi-codegen-client.yaml /tmp/observer-api.yaml
+	@$(OAPI_CODEGEN) -config clients/observabilitysvc/gen/oapi-codegen.yaml /tmp/observer-api.yaml
+	@$(OAPI_CODEGEN) -config clients/observabilitysvc/gen/oapi-codegen-client.yaml /tmp/observer-api.yaml
 	@rm /tmp/observer-api.yaml
 	@$(MAKE) fmt
 	@echo "Observer client generated successfully"
@@ -77,8 +80,8 @@ gen-observer-client: ## Generate Observer API client from upstream OpenAPI spec.
 gen-api-platform-client: ## Generate API Platform API client from upstream OpenAPI spec.
 	@echo "Generating Gateway client"
 	@curl -sL "https://raw.githubusercontent.com/wso2/api-platform/refs/heads/main/platform-api/src/resources/openapi.yaml" -o /tmp/gw-api.yaml
-	@oapi-codegen -config clients/apiplatformsvc/gen/oapi-codegen.yaml /tmp/gw-api.yaml
-	@oapi-codegen -config clients/apiplatformsvc/gen/oapi-codegen-client.yaml /tmp/gw-api.yaml
+	@$(OAPI_CODEGEN) -config clients/apiplatformsvc/gen/oapi-codegen.yaml /tmp/gw-api.yaml
+	@$(OAPI_CODEGEN) -config clients/apiplatformsvc/gen/oapi-codegen-client.yaml /tmp/gw-api.yaml
 	@rm /tmp/gw-api.yaml
 	@$(MAKE) fmt
 	@echo "API Platform client generated successfully"
