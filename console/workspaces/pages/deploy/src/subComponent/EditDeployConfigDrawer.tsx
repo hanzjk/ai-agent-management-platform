@@ -76,7 +76,7 @@ export function EditDeployConfigDrawer({
     if (!open) return;
     const cfg = configurations?.configurations;
     setEnv(cfg?.env?.map(
-      (e) => ({ key: e.key, value: e.value, isSensitive: e.isSensitive }),
+      (e) => ({ key: e.key, value: e.value ?? "", isSensitive: e.isSensitive, secretRef: e.secretRef }),
     ) ?? []);
     setFiles(cfg?.files ?? []);
   }, [open, configurations]);
@@ -84,7 +84,13 @@ export function EditDeployConfigDrawer({
   const { mutate: deployAgent, isPending } = useDeployAgent();
 
   const handleSave = useCallback(() => {
-    const validEnv = env.filter((e) => e.key);
+    const validEnv = env.filter((e) => e.key).map(({ key, value, isSensitive, secretRef }) => {
+      // Preserve secretRef for secrets the user did not edit
+      if (isSensitive && secretRef && !value) {
+        return { key, isSensitive, secretRef } as EnvironmentVariable;
+      }
+      return { key, value, isSensitive };
+    });
     const validFiles = files.filter((f) => f.key && f.mountPath);
     deployAgent(
       {
@@ -112,7 +118,15 @@ export function EditDeployConfigDrawer({
 
   const handleEnvChange = useCallback(
     (index: number, field: "key" | "value" | "isSensitive", value: string | boolean) => {
-      setEnv((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
+      setEnv((prev) => prev.map((item, i) => {
+        if (i !== index) return item;
+        const updated = { ...item, [field]: value };
+        // Clear secretRef once the user types a real new value
+        if (field === "value" && typeof value === "string" && value.length > 0 && item.secretRef) {
+          delete updated.secretRef;
+        }
+        return updated;
+      }));
     },
     [],
   );
@@ -170,6 +184,7 @@ export function EditDeployConfigDrawer({
                         keyValue={item.key}
                         valueValue={item.value}
                         isSensitive={item.isSensitive ?? false}
+                        isExistingSecret={!!(item.secretRef && item.isSensitive)}
                         onKeyChange={(v) => handleEnvChange(index, "key", v)}
                         onValueChange={(v) => handleEnvChange(index, "value", v)}
                         onSensitiveChange={(v) => handleEnvChange(index, "isSensitive", v)}

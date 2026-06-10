@@ -84,16 +84,11 @@ export const InternalAgentOverview = () => {
   }, [pipelinesData, project?.deploymentPipeline]);
 
   const sortedEnvironmentList = useMemo(() => {
-    if (!environmentList) return [];
+    if (!environmentList || !pipelineEnvOrder.length) return [];
     const orderIndex = new Map(pipelineEnvOrder.map((name, idx) => [name, idx]));
-    return [...environmentList].sort((a, b) => {
-      const ai = orderIndex.get(a.name);
-      const bi = orderIndex.get(b.name);
-      if (ai !== undefined && bi !== undefined) return ai - bi;
-      if (ai !== undefined) return -1;
-      if (bi !== undefined) return 1;
-      return Number(b.isProduction) - Number(a.isProduction);
-    });
+    return environmentList
+      .filter((e) => orderIndex.has(e.name))
+      .sort((a, b) => (orderIndex.get(a.name) ?? 0) - (orderIndex.get(b.name) ?? 0));
   }, [environmentList, pipelineEnvOrder]);
 
   const isKindAgent = !!agent?.kindName;
