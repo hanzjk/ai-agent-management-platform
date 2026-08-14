@@ -75,6 +75,12 @@ runs:
         } >> "${GITHUB_ENV}"
         echo "${root}/bin" >> "${GITHUB_PATH}"
 
+        # Moving GOPATH also moves where `go install` drops binaries. Workflows
+        # install their tools (wire, gofumpt, goimports, moq, ...) in one step
+        # and invoke them from a later one, so $GOPATH/bin has to be on PATH or
+        # every one of those tools reports "not found".
+        echo "${HOME}/go/bin" >> "${GITHUB_PATH}"
+
         # Report from the pinned binary directly: $GITHUB_PATH does not affect
         # the step that writes it, so `go version` here would still resolve to
         # whatever the runner had.
